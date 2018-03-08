@@ -1,0 +1,24 @@
+{
+  "name": "wuxiaworld",
+  "version": "1.0.0",
+  "description": "Wuxia World light novel manager",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "start": "electron .",
+    "package-mac": "find release-builds/* -name . -o -prune -exec rm -rf -- {} +; electron-packager . --overwrite --platform=darwin --arch=x64 --icon=assets/icons/mac/icon.icns --prune=true --out=release-builds",
+    "package-win": "find release-builds/* -name . -o -prune -exec rm -rf -- {} +; electron-packager . wuxiaworld --overwrite --asar=true --platform=win32 --arch=ia32 --icon=assets/icons/win/icon.ico --prune=true --out=release-builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"Wuxia World light novel manager\"",    
+    "package-linux": "find release-builds/* -name . -o -prune -exec rm -rf -- {} +; electron-packager . wuxiaworld --overwrite --asar=true --platform=linux --arch=x64 --icon=assets/icons/png/icon.png --prune=true --out=release-builds"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raember/wuxiaworld.git"
+  },
+  "author": "Raphael Emberger",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/raember/wuxiaworld/issues"
+  },
+  "homepage": "https://github.com/raember/wuxiaworld#readme"
+}
