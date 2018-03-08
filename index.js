@@ -7,7 +7,9 @@ process.env.NODE_ENV = "dev"
 let mainWindow = null;
 
 app.on("ready", () => {
-    mainWindow = new BrowserWindow();
+    mainWindow = new BrowserWindow({
+        icon: path.join(__dirname, 'assets/icons/png/icon.png')
+    });
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, "mainWindow.html"),
         protocol: "file:",
