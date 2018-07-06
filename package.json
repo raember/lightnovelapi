@@ -4,6 +4,14 @@
   "version": "1.0.0",
   "description": "WuxiaWorld light novel manager",
   "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://raember@github.com/raember/wuxiaworld.git"
+  },
+  "bugs": {
+    "url": "https://github.com/raember/wuxiaworld/issues"
+  },
+  "homepage": "https://github.com/raember/wuxiaworld#readme",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
