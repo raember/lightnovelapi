@@ -1,2 +1,2 @@
-# NovelUpdates
-Light Novel manager for [NovelUpdates](https://www.novelupdates.com/)
+# LightNovelApi
+Client sided API to light novel hosters.
