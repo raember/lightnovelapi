@@ -1,4 +1,3 @@
-from .api import *
-from .wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapterLink, WuxiaWorldBook, WuxiaWorldApi
+from .wuxiaworld import WuxiaWorld as WuxiaWorldApi
 
 __version__ = "0.1"

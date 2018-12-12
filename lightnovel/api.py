@@ -10,7 +10,7 @@ def ipinfo():
     return request('GET', 'https://ipinfo.io/json').json()
 
 
-class NovelApiBase(LogBase):
+class LightNovelApi(LogBase):
     def __init__(self, request_method=request):
         super().__init__()
         self._request = request_method
