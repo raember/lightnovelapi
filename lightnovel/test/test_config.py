@@ -1,13 +1,15 @@
+import unittest
 import json
 import os
 import requests
 import logging
-
-DATAFOLDER = 'data'
+import os.path
+from typing import List
+from enum import Enum
 
 
 def load_har(name: str) -> list:
-    path = os.path.join(DATAFOLDER, name + ".har")
+    path = name + ".har"
     with open(path, 'r') as fp:
         return json.load(fp)
 
@@ -19,6 +21,7 @@ def mock_request(method: str, url: str, har) -> requests.Response:
         if entry['request']['method'] == method and entry['request']['url'] == url:
             class ResponseMock:
                 pass
+
             response = ResponseMock()
             response.url = url
             response.text = entry['response']['content']['text']
@@ -29,6 +32,7 @@ def mock_request(method: str, url: str, har) -> requests.Response:
 
             def mock_json():
                 return json.loads(response.content)
+
             response.raise_for_status = mock_raise_for_status
             response.json = mock_json
             response.cookies = entry['response']['cookies']
@@ -36,3 +40,25 @@ def mock_request(method: str, url: str, har) -> requests.Response:
             return response
     log.info("No entry found...")
     raise LookupError("Couldn't find a response to {} request to {}".format(method, url))
+
+
+class HarTestCase(unittest.TestCase):
+    HAR = []
+
+    @classmethod
+    def setUpClass(cls):
+        cls.HAR = load_har(os.path.join(*cls.get_har_filename()))
+
+    @classmethod
+    def get_har_filename(cls) -> List[str]:
+        raise NotImplementedError('Must be overwritten.')
+
+    def _request(self, method: str, url: str, **kwargs):
+        return mock_request(method, url, self.HAR)
+
+
+DATAFOLDER = 'data'
+
+
+class Hars(Enum):
+    WW_HJC_COVER_C1_2 = [DATAFOLDER, 'WW_HJC_Cover_C1-2']
