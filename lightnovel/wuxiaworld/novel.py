@@ -2,11 +2,12 @@ import json
 from lightnovel.log_class import LogBase
 from typing import List
 from bs4 import BeautifulSoup, Tag
+from urllib3.util.url import parse_url
 
 
 class WuxiaWorldChapterLink:
     title = ''
-    url = ''
+    path = ''
 
 
 class WuxiaWorldBook:
@@ -20,9 +21,9 @@ class WuxiaWorldNovel(LogBase):
     tags: List[str] = []
     description: Tag = None
     books: List[WuxiaWorldBook] = []
-    first_chapter_url = ''
+    first_chapter_path = ''
     img_url = 'https://cdn.wuxiaworld.com/images/covers/'
-    url = 'https://www.wuxiaworld.com/novel/'
+    path = 'https://www.wuxiaworld.com/novel/'
 
     def __init__(self, bs: BeautifulSoup):
         super().__init__()
@@ -32,10 +33,12 @@ class WuxiaWorldNovel(LogBase):
         json_data = json.loads(json_str)
         self.title = json_data['name']
         self.log.debug("Novel title is: {}".format(self.title))
-        self.first_chapter_url = json_data['potentialAction']['target']['urlTemplate']
+        url = json_data['potentialAction']['target']['urlTemplate']
+        self.first_chapter_path = parse_url(url).path
         self.translator = json_data['author']['name']
         self.img_url = head.select_one('meta[property=og:image]').get('content')
-        self.url = head.select_one('meta[property=og:url]').get('content')
+        url = head.select_one('meta[property=og:url]').get('content')
+        self.path = parse_url(url).path
         p15 = bs.select_one('div.p-15')
         self.tags = self.__extract_tags(p15)
         self.description = p15.select('div.fr-view')[1]
@@ -64,7 +67,7 @@ class WuxiaWorldNovel(LogBase):
         for chapter_html in book_html.select('div div li a'):
             chapter = WuxiaWorldChapterLink()
             chapter.title = chapter_html.text.strip()
-            chapter.url = 'https://www.wuxiaworld.com' + chapter_html.get('href')
+            chapter.path = chapter_html.get('href')
             chapters.append(chapter)
         self.log.debug("Chapters found: {}".format(len(chapters)))
         return chapters

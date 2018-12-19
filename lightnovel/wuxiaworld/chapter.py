@@ -2,6 +2,7 @@ import json
 from lightnovel.log_class import LogBase
 from typing import List, Union
 from bs4 import BeautifulSoup, Tag, NavigableString
+from urllib3.util.url import parse_url
 
 
 class WuxiaWorldChapter(LogBase):
@@ -10,7 +11,7 @@ class WuxiaWorldChapter(LogBase):
     is_teaser = False
     previous_chapter_path = '/novel/'
     next_chapter_path = '/novel/'
-    url = 'https://www.wuxiaworld.com/novel/'
+    path = '/novel/'
 
     def __init__(self, bs: BeautifulSoup):
         super().__init__()
@@ -20,7 +21,8 @@ class WuxiaWorldChapter(LogBase):
         json_data = json.loads(json_str)
         self.translator = json_data['author']['name']
         # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', ' ')
-        self.url = head.select_one('meta[property=og:url]').get('content')
+        url = head.select_one('meta[property=og:url]').get('content')
+        self.path = parse_url(url).path
         for script_tag in head.select('script'):
             script = script_tag.text.strip('\n \t;')
             if script.startswith('var CHAPTER = '):

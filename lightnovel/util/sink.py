@@ -66,13 +66,13 @@ class LatexHtmlSink(HtmlSink):
         if tag.name == 'p':
             for child in tag.children:
                 string += self._parse(child)
-            return string
+            return "{}\\\\".format(string)
         elif tag.name == 'em':
             for child in tag.children:
                 string += self._parse(child)
-            return "*{}*".format(string)
+            return "\\textbf{" + string + '}'
         elif tag.name == 'hr':
-            return '---'
+            return '\\hrule'
         else:
             self.log.warning("Unhandled tag encountered: {}".format(tag))
             return tag.__str__()
