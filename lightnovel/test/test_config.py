@@ -62,3 +62,4 @@ DATAFOLDER = 'data'
 
 class Hars(Enum):
     WW_HJC_COVER_C1_2 = [DATAFOLDER, 'WW_HJC_Cover_C1-2']
+    WW_WMW_COVER_C1 = [DATAFOLDER, 'WW_WMW_Cover_C1']

@@ -12,7 +12,7 @@ class HJCSinkTest(HarTestCase):
         return Hars.WW_HJC_COVER_C1_2.value
 
     def test_parsing_hjc_description_as_string(self):
-        api = ww.WuxiaWorld(self._request)
+        api = ww.WuxiaWorldApi(self._request)
         novel = api.get_novel('/novel/heavenly-jewel-change')
         descr = novel.description
         strsink = util.StringHtmlSink()
@@ -32,7 +32,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          strdescr)
 
     def test_parsing_hjc_description_as_markdown(self):
-        api = ww.WuxiaWorld(self._request)
+        api = ww.WuxiaWorldApi(self._request)
         novel = api.get_novel('/novel/heavenly-jewel-change')
         descr = novel.description
         strsink = util.MarkdownHtmlSink()
@@ -63,7 +63,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          strdescr)
 
     def test_parsing_hjc_description_as_latex(self):
-        api = ww.WuxiaWorld(self._request)
+        api = ww.WuxiaWorldApi(self._request)
         novel = api.get_novel('/novel/heavenly-jewel-change')
         descr = novel.description
         strsink = util.LatexHtmlSink()
