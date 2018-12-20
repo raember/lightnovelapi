@@ -1,7 +1,7 @@
 from typing import List
 
 from lightnovel.test.test_config import HarTestCase, Hars
-import lightnovel.wuxiaworld as ww
+from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
 
 
 class WuxiaWorldApiHjcTest(HarTestCase):
@@ -9,10 +9,13 @@ class WuxiaWorldApiHjcTest(HarTestCase):
     def get_har_filename(cls) -> List[str]:
         return Hars.WW_HJC_COVER_C1_2.value
 
-    def test_parsing_novel_hjc(self):
-        api = ww.WuxiaWorld(self._request)
+    def test_parsing_novel(self):
+        api = WuxiaWorldApi(self._request)
         novel = api.get_novel('/novel/heavenly-jewel-change')
         self.assertIsNotNone(novel)
+        self.assertEqual(WuxiaWorldNovel, type(novel))
+        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', novel.get_url(novel.path))
+        self.assertEqual('https://www.wuxiaworld.com', novel.get_url())
         self.assertEqual('Heavenly Jewel Change', novel.title)
         self.assertEqual('Stardu5t', novel.translator)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', novel.first_chapter_path)
@@ -79,12 +82,16 @@ class WuxiaWorldApiHjcTest(HarTestCase):
         self.assertEqual(697, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = ww.WuxiaWorld(self._request)
+        api = WuxiaWorldApi(self._request)
         chapter = api.get_chapter('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
         self.assertIsNotNone(chapter)
+        self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.get_url(chapter.path))
+        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url())
         self.assertEqual("Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (1)", chapter.title)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.path)
         self.assertEqual('Stardu5t', chapter.translator)
+        self.assertEqual(25687, chapter.id)
         self.assertFalse(chapter.is_teaser)
         self.assertEqual('', chapter.previous_chapter_path)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.next_chapter_path)
@@ -118,12 +125,16 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
                          chapter.content.text)
 
     def test_parsing_chapter_2(self):
-        api = ww.WuxiaWorld(self._request)
+        api = WuxiaWorldApi(self._request)
         chapter = api.get_chapter('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
         self.assertIsNotNone(chapter)
+        self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.get_url(chapter.path))
+        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url())
         self.assertEqual("Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (2)", chapter.title)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.path)
         self.assertEqual('Stardu5t', chapter.translator)
+        self.assertEqual(25689, chapter.id)
         self.assertFalse(chapter.is_teaser)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.previous_chapter_path)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-03', chapter.next_chapter_path)
@@ -152,5 +163,150 @@ Feeling the anger in her eyes with some killing intent, Zhou Weiqing felt his ba
 “Misunderstanding?” The lady Royal Guard shook her wrist and drew her sword . Although she did not activate her 3 Physical Jewels, but her sword shone bright with Heavenly Energy. Her heavenly energy was still unable to be released from the sword, so she was likely still in the Heavenly Jing Energy Hierarchy, as those who had broken through to Heavenly Xu Energy would be able to release heavenly energy from their weapons. Of course, she had not even used her Physical Jewels as they would increase the amount of Heavenly Energy expended. Of course, facing Zhou Weiqing who was an unarmed commoner, it was definitely unnecessary to do so.
 With a cold flash, the tip of the sword was resting on Zhou Weiqing’s throat, just a small movement forward would end his life.
 “Physical Jewel Master Big Sis, this is really a misunderstanding! Besides, I really didn’t see anything! Please let me go” Zhou Weiqing looked pitifully at the lady Royal Guard, and with his honest looking features, it did seem very convincing.
+""".replace('\n', ''),
+                         chapter.content.text)
+
+
+class WuxiaWorldApiWmwTest(HarTestCase):
+    @classmethod
+    def get_har_filename(cls) -> List[str]:
+        return Hars.WW_WMW_COVER_C1.value
+
+    def test_parsing_novel(self):
+        api = WuxiaWorldApi(self._request)
+        novel = api.get_novel('/novel/warlock-of-the-magus-world')
+        self.assertIsNotNone(novel)
+        self.assertEqual(WuxiaWorldNovel, type(novel))
+        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', novel.get_url(novel.path))
+        self.assertEqual('https://www.wuxiaworld.com', novel.get_url())
+        self.assertEqual('Warlock of the Magus World', novel.title)
+        self.assertEqual('OMA', novel.translator)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', novel.first_chapter_path)
+        self.assertListEqual(['Completed', 'Chinese'], novel.tags)
+        self.assertEqual(
+            'https://cdn.wuxiaworld.com/images/covers/wmw.jpg?ver=2839cf223fce0da2ff6da6ae32ab0c4e705eee1a',
+            novel.img_url)
+        self.assertEqual('/novel/warlock-of-the-magus-world', novel.path)
+        self.assertEqual('\nWhat happens when a scientist from a futuristic world reincarnates in a World of Magic '
+                         'and Knights?An awesome MC — that’s what happens!A scientist’s goal is to explore the '
+                         'secrets of the universe, and this is exactly what Leylin sets out to do when he is '
+                         'reincarnated. Dark, cold and calculating, he makes use of all his resources as he sets off '
+                         'on his adventures to meet his goal.Face? Who needs that… Hmmm… that guy seems too powerful '
+                         'for me to take on now… I better keep a low profile for now.You want me to help you? Sure… '
+                         'but what benefit can I get out of it? Nothing? Bye.Hmmm… that guy looks like he might cause '
+                         'me problems in the future. Should I let him off for now and let him grow into someone that '
+                         'can threaten me….. Nahhh. *kill*\n',
+                         novel.description.text
+                         )
+        self.assertEqual(6, len(novel.books))
+        book = novel.books[0]
+        self.assertEqual('Transmigration', book.title)
+        self.assertEqual(287, len(book.chapters))
+        chapter = book.chapters[0]
+        self.assertEqual('Chapter 1', chapter.title)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.path)
+        book = novel.books[1]
+        self.assertEqual('Twilight Zone', book.title)
+        self.assertEqual(104, len(book.chapters))
+        book = novel.books[2]
+        self.assertEqual('Morning Star Chronicles', book.title)
+        self.assertEqual(237, len(book.chapters))
+        book = novel.books[3]
+        self.assertEqual('Passage of Bloodlines', book.title)
+        self.assertEqual(158, len(book.chapters))
+        book = novel.books[4]
+        self.assertEqual('World of Gods', book.title)
+        self.assertEqual(257, len(book.chapters))
+        book = novel.books[5]
+        self.assertEqual('Final War', book.title)
+        self.assertEqual(157, len(book.chapters))
+
+    def test_parsing_chapter_1(self):
+        api = WuxiaWorldApi(self._request)
+        chapter = api.get_chapter('/novel/warlock-of-the-magus-world/wmw-chapter-1')
+        self.assertIsNotNone(chapter)
+        self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.get_url(chapter.path))
+        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url())
+        self.assertEqual("Chapter 1", chapter.title)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.path)
+        self.assertEqual('OMA', chapter.translator)
+        self.assertEqual(9107, chapter.id)
+        self.assertFalse(chapter.is_teaser)
+        self.assertEqual('', chapter.previous_chapter_path)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-2', chapter.next_chapter_path)
+        self.maxDiff = None
+        self.assertEqual("""
+Reincarnation
+‘My head really hurts….’
+This was Fang Ming’s first thought upon waking up. It felt as if there was a cut on his head, hurting so badly that it seemed as if his skull was about to crack apart.
+As his consciousness cleared, he realised he was riding on what seemed like a horse carriage. His body bounced along to the rhythm of the moving carriage, sending shockwaves through the wound. The pain was so great that he had to suck in several sharp breaths.
+Opening his eyes, he surveyed his surroundings.
+What filled his vision were walls formed from hollowed planks. Sharing this carriage with him were quite a few fair-haired and blue-eyed youths, their eyes closed in their reverie. Not one of them bothered to spare a glance in his direction.
+He seemed to be lying down on the floor of the carriage. Feeling the biting cold from the wood, Fang Ming realised that his body would not be able to bear lying down much longer. To avoid catching a cold, he struggled hard to get up in a hurry.
+At that moment, he felt a sharp pain lancing through his head.
+The pain was sudden, and brought with it a flood of strange memories. Fang Ming’s eyes rolled back as he fainted.
+“Leylin... Leylin! Wake up…” Fang Ming heard in his daze, and couldn’t help but open his eyes.
+‘Is this… reincarnation?’ He still clearly remembered the dazzling flames from the energy reactor’s explosion, one that was impossible to survive with his lack of protection. On top of that, this type of carriage made of wooden planks was considered an ancient antique in his old world, and would definitely not be used.
+After organising the new memories in his mind, Fang Ming gained some insight about his body and this world.
+This realm was in an era that was similar to the European Middle Ages. But there was something more to this world than that, the presence of a mysterious force. The presence… of magic.
+The original owner of his current body was called Leylin Farlier, and he was the son of a minor noble. He had been tested to be gifted with the talent to become a Magus and as such his father, Viscount John Farlier, had pulled strings to allow him to become a magician-in-training, an acolyte. The horse carriage he was currently on was travelling towards a magic academy.
+The one who had woken him up was a large, male youth.
+His large eyes were surrounded by his thick eyebrows which complemented his long, straight nose and sparkling gold hair. Although his face was somewhat tender, showing his youth, he had a sturdy, muscular body. He looked extremely manly.
+Seeing that Fang Ming had awoken, the boy laughed happily, “Haha… Leylin, you’re finally awake! If you had been even a few minutes late, you probably wouldn’t have made it to dinner. You don’t want to starve, do you?”
+Fang Ming lowered his eyes. After some thought, he figured out this person’s identity, “Thanks, George!”
+All the youths on this carriage had been tested to be gifted with magic. George was a Count’s legitimate son, and a favoured one at that. When his gift was revealed, the Count spent a lot of resources and pulled many strings in order to enter a magic academy.
+‘A Count?’ Fang Ming inwardly thought.
+His memories returned to Leylin’s father, Viscount John Farlier. His lands were about as large as a single city from Fang Ming’s previous life, and he had thousands of soldiers under his command.
+In this world, noble rankings were inexorably tied to personal strength. George’s father being a count meant that his holdings were likely the size of at least several cities, and his annual income was a few thousand gold coins. And even with such finances and power at his disposal, it had taken a lot of effort for him to get George on this carriage. Fang Ming couldn’t help but wonder how Leylin’s father managed to do the same for him.
+Even as he began to ponder the question, another sharp pain jolted through his head, and another scene appeared in his mind’s eye.
+He was in a dark room, with the musty old shelves lining the sides filled with a sense of antiquity. The surroundings were chock full of dust.
+Under dim light, John Farlier solemnly passed him a ring, saying, “Leylin, my dear son, this is our Farlier Family’s heirloom, a promise from a Magus. Your grandfather had once helped an injured Magus out, and in return, he gifted him this ring.
+“This ring is a promise. If any of your grandfather’s descendants had the gift of magic, they could use this ring to enter a magic academy for free! I give this to you, now, in hopes that you can be the pride of the Farlier Family and uphold our legacy…”
+‘The ring!’ Fang Ming’s eyes narrowed, and his right hand subconsciously moved to his chest.
+As his hand touched his clothing, he could feel a solid underneath, the metal ring was still there.
+Heaving a sigh of relief in his heart, he thought to himself, ‘Phew! Either those guys didn’t recognise this as a treasure, or there’s a restriction of sorts. Either way, thank goodness this wasn’t snatched away.’
+Fang Ming was a scientist in his former life, and the very mention of such a mysterious force as magic filled him with a desire to conduct some research about it.
+Furthermore, he didn’t want to be chased back home because he had lost such an important proof of entry.
+Although he had taken over this body and even its memories, he was still very different from the original Leylin. His family members, who had spent years with him, would easily be able to tell the difference. If they mistook him as being possessed by a demon and perhaps begged one of those mysterious Magi to investigate, it was extremely likely that he would be found out.
+‘However, if I can enter a magic academy, I probably won’t return for at least several years. By that time, any changes in behaviour will be written off as par for the course. Magi are known to be strange and eccentric. At that point, it would be strange if I hadn’t changed at all, not if I had!’
+Just as he was in deep thought, a pair of strong large hands suddenly assisted him to his feet.
+“What are you thinking about?” George asked.
+“No– Nothing!” Fang Ming quickly shook his head, but then held onto it once more, still in pain.
+He suddenly spun his head around and looked at George, causing the boy’s heart to stop in its tracks. He felt as if he was being stared at by a venomous snake.
+Fang Ming rolled his eyes and asked, “Dearest George, why didn’t you wake me up earlier, instead letting me just lie on the floor like that for so long?”
+“Heh heh! I saw you having such a nice sleep, and thought you liked lying down there!” George scratched his head abashedly. However, his eyes sparked with a cunning gleam.
+Under Fang Ming’s murderous glare, he finally raised his hands in surrender, “Fine! Fine! Who asked you to offend my goddess. Offending her is still fine; as your bro, I am not such a petty person. Alas, the entire carriage is now treating you like an enemy, and I don’t want to be isolated too!”
+‘Offend? Goddess?’ Fang Ming scratched his head, but then he suddenly remembered why he was beaten up.
+It was a girl named Bessita. Although she was only 15 years of age, her body was already well-developed and voluptuous. In addition to her big watery eyes, it was a huge draw to the lecherous Leylin.
+The original Leylin was no gentleman. He had lost his virginity at the age of twelve, and after that, he had either seduced or forced his way with many others, and had by now slept with more than a hundred women! He had been known as the scourge of his father’s holdings.
+As Fang Ming finished exploring the memories, he rolled his eyes once again in disdain. No wonder this body was so weak and frail, it wasn’t just because of the injuries.
+Thinking back, it was clear that Leylin had been too used to causing trouble in his own territory, and hadn’t been able to control himself when he saw Bessita.
+The first few times it was still rather normal; flirting and making passes at her. Near the end, however, he had resorted to violent means. When Fang Ming saw these memories, he couldn’t help but label the original as an idiot.
+That Bessita was the princess of a small country! And Leylin still wanted to rape her. Was there a brain in his skull or was it just dirt? Sheesh!
+What happened after went without saying– Leylin was taught a savage lesson by a bunch of ‘Flower Guardians’, eventually succumbing to the injuries. This had eventually benefitted Fang Ming.
+‘Heh, this Bessita isn’t as simple as she appears. Such a scheming mind!’ Fang Ming laughed coldly at this thought.
+‘Fine. No matter what, I have taken over your body. If I get the chance, I’ll avenge you. After all, I’m now Leylin Farlier!’ Fang Ming swore in his heart.
+Leylin found no mention of anything resembling Asians in his memories, nor had he heard anything about China. In this new western world, using his own Chinese name would be too dangerous!
+Leylin looked around to find that there was nobody else inside the spacious carriage. It was no wonder that George had come to call him over.
+“No matter what, I still have to thank you! George, do you have any medicine?” Fang Ming stood up and stretched his body. Although it still hurt in a few places, it did not impede his movements, and the wound at the back of his head had already become a scab.
+“Heh heh…I knew that you’d need this!” George laughed as he tossed a small bottle over, “This is my family’s secret product. I heard that it’s usually used during Knight training, and is extremely effective against any bodily injuries!”
+As George spoke, he looked around furtively, “Alright! Dinner is about to start. I’m going to head there first, you should apply the medicine quickly and hurry over too. Remember, do not tell anyone else about our friendship!”
+After he finished speaking, he had run off like a gust of wind!
+Looking at George’s figure disappearing into the distance, Leylin couldn’t help but massage his forehead. It looked like this Leylin had truly stirred up a hornet’s nest. Was it such a big deal? His memories told him that the people of this world were rather open about sex…
+At this point, he couldn’t do anything to remedy the situation. Swiftly taking off his clothes, Leylin quickly rubbed the medicine all over the injuries on his body.
+“Hss… This damned George. Couldn’t he help me apply the medicine before leaving?” Leylin drew several sharp cold breaths as he applied the medicine.
+The medicine was extremely effective. As soon as he applied it, there was a cooling sensation and the pain vanished.
+After he had dealt with the wounds on his body, Leylin put on his clothes and opened the carriage door.
+*Whoosh!* A gentle breeze blew over. The sun was setting on the horizon, painting everything a golden red.
+Leylin’s eyes moistened as he muttered, “No matter what, it feels good to be alive!”
+Looking at the surroundings, he noticed several large carriages forming a circle to make a crude temporary campsite. There was a large fire in the middle.
+There were many youths around the fire, sitting and resting on cloth mats laid on the ground. They were laughing and playing with each other while eating the bread in their hands.
+Leylin walked towards a table that had quite a few breads and juices placed on it. According to his memories, this was where food was distributed.
+When he approached the area, he saw that there were a few people queuing up. As they spotted Leylin, their gazes turned to ones of derision.Although Leylin thought of himself as thick-skinned, he still found it somewhat difficult to endure.
+Still, he did not leave. No matter what, he still had to eat.
+“Hurry up!” A hoarse voice rang out.
+“So… Sorry, Lady Angelia!” A freckled boy quickly apologised and took his share of the food before running away.
+[Beep! Danger Alert! Danger Alert! Host body is extremely close to a source of danger. It is recommended to move at least 1000 metres away!]
 """.replace('\n', ''),
                          chapter.content.text)

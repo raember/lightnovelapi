@@ -1,36 +1,26 @@
 import json
-from lightnovel.log_class import LogBase
+from lightnovel.api import Novel, ChapterEntry, Book
 from typing import List
 from bs4 import BeautifulSoup, Tag
 from urllib3.util.url import parse_url
+from . import WuxiaWorld
 
 
-class WuxiaWorldChapterLink:
-    title = ''
-    path = ''
+class WuxiaWorldChapterEntry(WuxiaWorld, ChapterEntry):
+    pass
 
 
-class WuxiaWorldBook:
-    title = ''
-    chapters: List[WuxiaWorldChapterLink] = []
+class WuxiaWorldBook(WuxiaWorld, Book):
+    chapters: List[WuxiaWorldChapterEntry] = []
 
 
-class WuxiaWorldNovel(LogBase):
-    title = ''
-    translator = ''
-    tags: List[str] = []
-    description: Tag = None
+class WuxiaWorldNovel(WuxiaWorld, Novel):
     books: List[WuxiaWorldBook] = []
-    first_chapter_path = ''
-    img_url = 'https://cdn.wuxiaworld.com/images/covers/'
-    path = 'https://www.wuxiaworld.com/novel/'
+    tags: List[str] = []
 
-    def __init__(self, bs: BeautifulSoup):
-        super().__init__()
-        self.log.debug('Extracting data from html.')
-        head = bs.select_one('head')
-        json_str = head.select_one('script[type=application/ld+json]').text
-        json_data = json.loads(json_str)
+    def _parse(self, document: BeautifulSoup):
+        head = document.select_one('head')
+        json_data = json.loads(head.select_one('script[type=application/ld+json]').text)
         self.title = json_data['name']
         self.log.debug("Novel title is: {}".format(self.title))
         url = json_data['potentialAction']['target']['urlTemplate']
@@ -39,7 +29,7 @@ class WuxiaWorldNovel(LogBase):
         self.img_url = head.select_one('meta[property=og:image]').get('content')
         url = head.select_one('meta[property=og:url]').get('content')
         self.path = parse_url(url).path
-        p15 = bs.select_one('div.p-15')
+        p15 = document.select_one('div.p-15')
         self.tags = self.__extract_tags(p15)
         self.description = p15.select('div.fr-view')[1]
         self.books = self.__extract_books(p15)
@@ -62,12 +52,13 @@ class WuxiaWorldNovel(LogBase):
             books.append(book)
         return books
 
-    def __extract_chapters(self, book_html: Tag) -> List[WuxiaWorldChapterLink]:
+    def __extract_chapters(self, book_html: Tag) -> List[WuxiaWorldChapterEntry]:
         chapters = []
         for chapter_html in book_html.select('div div li a'):
-            chapter = WuxiaWorldChapterLink()
+            chapter = WuxiaWorldChapterEntry()
             chapter.title = chapter_html.text.strip()
             chapter.path = chapter_html.get('href')
             chapters.append(chapter)
         self.log.debug("Chapters found: {}".format(len(chapters)))
         return chapters
+

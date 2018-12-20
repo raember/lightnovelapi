@@ -1,22 +1,17 @@
 import json
-from lightnovel.log_class import LogBase
-from typing import List, Union
+from lightnovel import Chapter
 from bs4 import BeautifulSoup, Tag, NavigableString
 from urllib3.util.url import parse_url
+from . import WuxiaWorld
 
 
-class WuxiaWorldChapter(LogBase):
-    title = ''
-    translator = ''
+class WuxiaWorldChapter(WuxiaWorld, Chapter):
+    id = 0
     is_teaser = False
-    previous_chapter_path = '/novel/'
-    next_chapter_path = '/novel/'
-    path = '/novel/'
+    content: Tag = None
 
-    def __init__(self, bs: BeautifulSoup):
-        super().__init__()
-        self.log.debug('Extracting data from html.')
-        head = bs.select_one('head')
+    def _parse(self, document: BeautifulSoup):
+        head = document.select_one('head')
         json_str = head.select_one('script[type=application/ld+json]').text
         json_data = json.loads(json_str)
         self.translator = json_data['author']['name']
@@ -26,16 +21,16 @@ class WuxiaWorldChapter(LogBase):
         for script_tag in head.select('script'):
             script = script_tag.text.strip('\n \t;')
             if script.startswith('var CHAPTER = '):
-                json_str = script[14:]
-                json_data = json.loads(json_str)
-                self.title = json_data['name']
-                self.is_teaser = json_data['isTeaser']
-                self.previous_chapter_path = json_data['prevChapter']
-                self.next_chapter_path = json_data['nextChapter']
+                json_data = json.loads(script[14:])
                 break
+        self.title = json_data['name']
+        self.id = int(json_data['id'])
+        self.is_teaser = json_data['isTeaser']
+        self.previous_chapter_path = json_data['prevChapter']
+        self.next_chapter_path = json_data['nextChapter']
         if self.title == '':
             self.log.warning("Couldn't extract data from CHAPTER variable.")
-        self.content = self._process_content(bs.select_one('div.p-15 div.fr-view'), self.title)
+        self.content = self._process_content(document.select_one('div.p-15 div.fr-view'), self.title)
 
     def _process_content(self, content: Tag, title: str) -> Tag:
         new_content = BeautifulSoup(features="html5lib")

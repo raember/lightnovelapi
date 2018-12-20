@@ -1,21 +1,13 @@
 from lightnovel.api import LightNovelApi
-from bs4 import BeautifulSoup
 from .novel import WuxiaWorldNovel
 from .chapter import WuxiaWorldChapter
+from . import WuxiaWorld
 
 
-class WuxiaWorld(LightNovelApi):
+class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
 
     def get_novel(self, novel_path: str) -> WuxiaWorldNovel:
-        url = "https://www.wuxiaworld.com{}".format(novel_path)
-        response = self._request('GET', url)
-        response.raise_for_status()
-        bs = BeautifulSoup(response.text, features="html5lib")
-        return WuxiaWorldNovel(bs)
+        return WuxiaWorldNovel(self._get_document(novel_path))
 
     def get_chapter(self, chapter_path: str) -> WuxiaWorldChapter:
-        url = "https://www.wuxiaworld.com{}".format(chapter_path)
-        response = self._request('GET', url)
-        response.raise_for_status()
-        bs = BeautifulSoup(response.text, features="html5lib")
-        return WuxiaWorldChapter(bs)
+        return WuxiaWorldChapter(self._get_document(chapter_path))
