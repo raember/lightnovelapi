@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import List
 
@@ -49,6 +50,7 @@ class Chapter(LightNovelPage):
     translator = ''
     previous_chapter_path = ''
     next_chapter_path = ''
+    content: Tag = None
 
 
 class ChapterEntry:
@@ -100,3 +102,20 @@ class LightNovelApi(LightNovelEntity):
             time.sleep(delay)
             chapters.append(chapter)
         return novel, chapters
+
+    def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter]):
+        from util import LatexHtmlSink
+        FOLDER = 'out'
+        path = os.path.join(FOLDER, novel.title)
+        if os.path.isdir(path):
+            os.rmdir(path)
+        os.mkdir(path)
+        index = 0
+        chapter_names = []
+        converter = LatexHtmlSink()
+        for chapter in chapters:
+            index += 1
+            chapter_name = os.path.join(path, "{} - {}.tex".format(index, chapter.title))
+            chapter_names.append(chapter_name)
+            with open(chapter_name, 'w') as f:
+                f.write("\\section{{{}}}\n{}".format(chapter_name, converter.parse(chapter.content)))
