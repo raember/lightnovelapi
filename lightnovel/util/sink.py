@@ -1,4 +1,5 @@
-from ..log_class import LogBase
+import re
+from lightnovel import LogBase
 from bs4 import Tag, NavigableString
 from typing import List
 
@@ -8,71 +9,94 @@ class HtmlSink(LogBase):
     def parse(self, html: Tag) -> str:
         strings = []
         for child in html.children:
-            string = self._parse(child)
-            if string is not None:
-                strings.append(string)
+            if type(child) == NavigableString:
+                strings.append(self.parse_navigable_string(child))
+            elif type(child) == Tag:
+                strings.append(self.parse_child_tag(child))
             else:
-                self.log.warning("Returned string empty. ({})".format(child))
-        return self._join(strings)
+                raise Exception("Unknown object type: {}".format(type(child)))
+        return self.join_strings(strings)
 
-    def _join(self, strings: List[str]) -> str:
+    def join_strings(self, strings: List[str]) -> str:
         return str.join('\n', strings).strip()
 
-    def _parse(self, el) -> str:
-        if type(el) == NavigableString:
-            el: NavigableString
-            return el.__str__()
-        elif not type(el) == Tag:
-            self.log.error("Unknown object type: {}".format(type(el)))
-            return None
-        return self._parse_tag(el)
+    def parse_child_tag(self, tag: Tag) -> str:
+        if tag.name == 'p':
+            return self.parse_paragraph(tag)
+        elif tag.name == 'hr':
+            return self.parse_horizontal_rule(tag)
+        else:
+            raise Exception("Unknown child tag name: {}".format(tag.name))
 
-    def _parse_tag(self, tag: Tag) -> str:
+    def parse_navigable_string(self, string: NavigableString) -> str:
+        return string.__str__()
+
+    def parse_paragraph(self, tag: Tag) -> str:
+        return self.parse_sub_tag(tag)
+
+    def parse_sub_tag(self, tag: Tag) -> str:
+        string = ''
+        for subtag in tag.children:
+            if type(subtag) == NavigableString:
+                subtag: NavigableString
+                string += self.parse_navigable_string(subtag)
+            elif type(subtag) == Tag:
+                subtag: Tag
+                if subtag.name in ['em', 'i']:
+                    string += self.parse_italics(subtag)
+                elif subtag.name in ['strong', 'b']:
+                    string += self.parse_strong(subtag)
+                else:
+                    raise Exception("Unknown tag type: {}".format(subtag.name))
+            else:
+                raise Exception("Unknown object type: {}".format(type(subtag)))
+        return string
+
+    def parse_horizontal_rule(self, tag: Tag) -> str:
+        raise NotImplementedError('Must be overwritten.')
+
+    def parse_strong(self, tag: Tag) -> str:
+        raise NotImplementedError('Must be overwritten.')
+
+    def parse_italics(self, tag: Tag) -> str:
         raise NotImplementedError('Must be overwritten.')
 
 
 class StringHtmlSink(HtmlSink):
 
-    def _parse_tag(self, tag: Tag) -> str:
+    def parse_child_tag(self, tag: Tag) -> str:
         return tag.text.strip()
 
 
 class MarkdownHtmlSink(HtmlSink):
 
-    def _join(self, strings: List[str]) -> str:
+    def join_strings(self, strings: List[str]) -> str:
         return str.join('\n\n', strings).strip()
 
-    def _parse_tag(self, tag: Tag) -> str:
-        string = ''
-        if tag.name == 'p':
-            for child in tag.children:
-                string += self._parse(child)
-            return string
-        elif tag.name == 'em':
-            for child in tag.children:
-                string += self._parse(child)
-            return "*{}*".format(string)
-        elif tag.name == 'hr':
-            return '---'
-        else:
-            self.log.warning("Unhandled tag encountered: {}".format(tag))
-            return tag.__str__()
+    def parse_horizontal_rule(self, tag: Tag) -> str:
+        return '---'
+
+    def parse_italics(self, tag: Tag) -> str:
+        return "_{}_".format(self.parse_sub_tag(tag))
+
+    def parse_strong(self, tag: Tag) -> str:
+        return "**{}**".format(self.parse_sub_tag(tag))
 
 
 class LatexHtmlSink(HtmlSink):
 
-    def _parse_tag(self, tag: Tag) -> str:
-        string = ''
-        if tag.name == 'p':
-            for child in tag.children:
-                string += self._parse(child)
-            return "{}\\\\".format(string)
-        elif tag.name == 'em':
-            for child in tag.children:
-                string += self._parse(child)
-            return "\\textbf{" + string + '}'
-        elif tag.name == 'hr':
-            return '\\hrule'
-        else:
-            self.log.warning("Unhandled tag encountered: {}".format(tag))
-            return tag.__str__()
+    def parse_navigable_string(self, string: NavigableString) -> str:
+        string = re.sub(r"[{}\\$]", '\\$1', string)
+        return string
+
+    def parse_paragraph(self, tag: Tag) -> str:
+        return "{}\\\\".format(self.parse_sub_tag(tag))
+
+    def parse_horizontal_rule(self, tag: Tag) -> str:
+        return '\\hrule'
+
+    def parse_italics(self, tag: Tag) -> str:
+        return "\\textit{{{}}}".format(self.parse_sub_tag(tag))
+
+    def parse_strong(self, tag: Tag) -> str:
+        return "\\textbf{{{}}}".format(self.parse_sub_tag(tag))
