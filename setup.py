@@ -1,18 +1,32 @@
-from setuptools import setup
+import setuptools
 import lightnovel
 
-LONG_DESC = open('README.md').read()
-VERSION = lightnovel.__version__
-setup(name='LightNovelApi',
-      version=VERSION,
-      description='Client sided API to light novel hosters',
-      long_description_content_type="text/markdown",
-      long_description=LONG_DESC,
-      author='Raphael Emberger',
-      keywords="light-novel novel lightnovel wuxiaworld",
-      license="MIT",
-      url='https://github.com/raember/lightnovelapi',
-      packages=['lightnovel'],
-      package_dir={'lightnovel': 'lightnovel'},
-      test_suite="lightnovel/test"
-      )
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name='lightnovelapi',
+    version=lightnovel.__version__,
+    author='Raphael Emberger',
+    description='Client sided API to light novel hosters',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    keywords="light-novel novel lightnovel wuxiaworld",
+    license="MIT",
+    url='https://github.com/raember/lightnovelapi',
+    packages=setuptools.find_packages(exclude=['*test*']),
+    install_requires=['beautifulsoup4'],
+    test_suite="lightnovel/test",
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Natural Language :: English',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 3.7',
+        'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
+        'Topic :: Other/Nonlisted Topic',
+        'Topic :: Software Development :: Libraries :: Python Modules'
+    ]
+)
