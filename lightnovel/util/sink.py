@@ -1,7 +1,7 @@
 import re
-from lightnovel import LogBase
 from bs4 import Tag, NavigableString
 from typing import List
+from lightnovel import LogBase
 
 
 class HtmlSink(LogBase):
