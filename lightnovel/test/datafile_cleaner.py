@@ -12,9 +12,21 @@ for filename in os.listdir("data"):
     if type(obj) == dict:
         print("Classified as unprocessed file. Cleaning...")
         entries = []
+        images = []
         for entry in obj['log']['entries']:
             request = entry['request']
             response = entry['response']
+            respcontent = response['content']
+            if 'mimeType' in respcontent:
+                mimetype: str = respcontent['mimeType']
+                if mimetype.startswith('image') and not request['url'] in images:
+                    images.append(request['url'])
+                elif mimetype.startswith('text/html'):
+                    pass
+                else:
+                    continue
+            else:
+                continue
             entries.append({
                 'request': {
                     'method': request['method'],

@@ -47,7 +47,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                 else:
                     self.log.warning("Non-Empty string: '{}'.".format(child))
             elif type(child) == Tag:
-                if child.name == 'p':
+                if child.name in ['p', 'div', 'a']:
                     if len(child.text.strip('\n ')) == 0:
                         # self.log.debug("Empty paragraph.")
                         pass
@@ -63,7 +63,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                     # self.log.debug('Rule reached.')
                     break
                 else:
-                    self.log.error("Unexpected tag name: {}".format(child.name))
+                    self.log.error("Unexpected tag name: {}".format(child))
             else:
                 self.log.error("Unexpected type: {}".format(child))
         return new_content
