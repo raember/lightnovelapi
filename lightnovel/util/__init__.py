@@ -1,1 +1,1 @@
-from .sink import StringHtmlSink, MarkdownHtmlSink, LatexHtmlSink
+from .sink import HtmlSink, StringHtmlSink, MarkdownHtmlSink, LatexHtmlSink
