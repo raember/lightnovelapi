@@ -1,10 +1,9 @@
+import logging
 import time
-from typing import List, Tuple
+from typing import List
 
 import requests
 from bs4 import Tag, BeautifulSoup
-
-from .log_class import LogBase
 
 
 def request(method: str, url: str, **kwargs) -> requests.Response:
@@ -13,6 +12,11 @@ def request(method: str, url: str, **kwargs) -> requests.Response:
 
 def ipinfo():
     return request('GET', 'https://ipinfo.io/json').json()
+
+
+class LogBase:
+    def __init__(self):
+        self.log = logging.getLogger(self.__class__.__name__)
 
 
 class LightNovelEntity(LogBase):
@@ -32,6 +36,12 @@ class LightNovelPage(LightNovelEntity):
 
     def _parse(self, document: BeautifulSoup):
         raise NotImplementedError('Must be overwritten')
+
+    def get_url(self, path: str = None):
+        if path is not None:
+            return self.host + path
+        else:
+            return self.host + self.path
 
 
 class Chapter(LightNovelPage):
@@ -86,7 +96,7 @@ class LightNovelApi(LightNovelEntity):
                 time.sleep(delay)
                 chapters.append(chapter)
         while chapter.next_chapter_path:
-                chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
-                time.sleep(delay)
-                chapters.append(chapter)
+            chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
+            time.sleep(delay)
+            chapters.append(chapter)
         return novel, chapters
