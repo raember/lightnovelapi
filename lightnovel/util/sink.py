@@ -1,10 +1,9 @@
 import re
 from bs4 import Tag, NavigableString
 from typing import List
-from lightnovel import LogBase
 
 
-class HtmlSink(LogBase):
+class HtmlSink:
 
     def parse(self, html: Tag) -> str:
         strings = []
@@ -21,7 +20,7 @@ class HtmlSink(LogBase):
         return str.join('\n', strings).strip()
 
     def parse_child_tag(self, tag: Tag) -> str:
-        if tag.name == 'p':
+        if tag.name in ['p', 'div', 'a']:
             return self.parse_paragraph(tag)
         elif tag.name == 'hr':
             return self.parse_horizontal_rule(tag)
@@ -46,8 +45,12 @@ class HtmlSink(LogBase):
                     string += self.parse_italics(subtag)
                 elif subtag.name in ['strong', 'b']:
                     string += self.parse_strong(subtag)
+                elif subtag.name in ['a', 'span', 'sup']:
+                    string += self.parse_link(subtag)
+                elif subtag.name in ['br']:
+                    pass
                 else:
-                    raise Exception("Unknown tag type: {}".format(subtag.name))
+                    raise Exception("Unknown tag type: {}({})".format(subtag.name, subtag))
             else:
                 raise Exception("Unknown object type: {}".format(type(subtag)))
         return string
@@ -60,6 +63,9 @@ class HtmlSink(LogBase):
 
     def parse_italics(self, tag: Tag) -> str:
         raise NotImplementedError('Must be overwritten.')
+
+    def parse_link(self, tag: Tag) -> str:
+        return self.parse_sub_tag(tag)
 
 
 class StringHtmlSink(HtmlSink):
