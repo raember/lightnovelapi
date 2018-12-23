@@ -1,10 +1,11 @@
 import logging
 import os
+import shutil
 import time
-from typing import List
-
+from typing import List, Tuple
 import requests
 from bs4 import Tag, BeautifulSoup
+from util import slugify
 
 
 def request(method: str, url: str, **kwargs) -> requests.Response:
@@ -51,6 +52,7 @@ class Chapter(LightNovelPage):
     previous_chapter_path = ''
     next_chapter_path = ''
     content: Tag = None
+    success = False
 
 
 class ChapterEntry:
@@ -88,17 +90,24 @@ class LightNovelApi(LightNovelEntity):
     def get_chapter(self, chapter_path: str) -> Chapter:
         return Chapter(self._get_document(chapter_path))
 
-    def get_whole_novel(self, novel_path: str, delay=1.0):
-        novel = self.get_novel(self.get_url(novel_path))
+    def get_whole_novel(self, novel_path: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
+        novel = self.get_novel(novel_path)
         chapters = []
         chapter = None
         for book in novel.books:
             for chapter_entry in book.chapters:
-                chapter = self.get_chapter(self.get_url(chapter_entry.path))
+                chapter = self.get_chapter(chapter_entry.path)
+                if not chapter.success:
+                    self.log.warning("Failed verifying chapter.")
+                    continue
                 time.sleep(delay)
                 chapters.append(chapter)
-        while chapter.next_chapter_path:
-            chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
+        while chapter.success and chapter.next_chapter_path:
+            self.log.debug("Following existing next chapter link({}).".format(chapter.next_chapter_path))
+            chapter = self.get_chapter(chapter.next_chapter_path)
+            if not chapter.success:
+                self.log.warning("Failed verifying chapter.")
+                break
             time.sleep(delay)
             chapters.append(chapter)
         return novel, chapters
@@ -106,16 +115,27 @@ class LightNovelApi(LightNovelEntity):
     def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter]):
         from util import LatexHtmlSink
         FOLDER = 'out'
-        path = os.path.join(FOLDER, novel.title)
+        if os.path.isdir(FOLDER):
+            shutil.rmtree(FOLDER)
+        novel_title = slugify(novel.title)
+        path = os.path.join(FOLDER, novel_title)
         if os.path.isdir(path):
-            os.rmdir(path)
+            shutil.rmtree(path)
+        os.mkdir(FOLDER)
         os.mkdir(path)
         index = 0
-        chapter_names = []
+        chapter_titles = []
         converter = LatexHtmlSink()
         for chapter in chapters:
             index += 1
-            chapter_name = os.path.join(path, "{} - {}.tex".format(index, chapter.title))
-            chapter_names.append(chapter_name)
-            with open(chapter_name, 'w') as f:
-                f.write("\\section{{{}}}\n{}".format(chapter_name, converter.parse(chapter.content)))
+            chapter_title = slugify(chapter.title)
+            chapter_path = os.path.join(path, "{}_{}.tex".format(index, chapter_title))
+            chapter_titles.append(chapter_title)
+            with open(chapter_path, 'w') as f:
+                f.write("\\section{{{}}}\n{}".format(chapter_title, converter.parse(chapter.content)))
+        with open(os.path.join(FOLDER, novel_title, chapter_title + '.tex'), 'w') as f:
+            f.write("""\\documentclass{{article}}
+\\begin{{document}}""".format(novel_title))
+            for chapter_title in chapter_titles:
+                f.write("\\include{{{}}}\n".format(chapter_title))
+            f.write("\\end{document}")
