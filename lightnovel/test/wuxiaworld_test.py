@@ -375,22 +375,21 @@ class WuxiaWorldApiSFFTest(HarTestCase):
         self.assertEqual('/novel/stop-friendly-fire/sff-chapter-2', chapter.next_chapter_path)
         self.maxDiff = None
         self.assertEqual("""
-<Prologue. This Trade is a Draw>
 "Now, let's clear things up."
-The woman put down the tobacco pipe she had been gently biting down on, puffed out the smoke, and licked her lips. She was a beautiful woman with striking red, wavy hair, but more importantly was the fact that she was a 'god'. 
+The woman put down the tobacco pipe she had been gently biting down on, puffed out the smoke, and licked her lips. She was a beautiful woman with striking red, wavy hair, but more importantly was the fact that she was a 'god'.\xA0
 "So, what you desire is... an immortal body and infinite growth potential?"
 "Yes!"
 "Nope, not possible. Go back."
 "Aw, don't be like that."
-The man, a 27-year-old man called Lee Shin Woo, sat opposite from the woman, separated by an antique desk. He was an ordinary office worker who liked fantasy novels and games. Well, at least until he died. 
-And now that he'd died, he was a hero that had been chosen by a god. Probably. 
+The man, a 27-year-old man called Lee Shin Woo, sat opposite from the woman, separated by an antique desk. He was an ordinary office worker who liked fantasy novels and games. Well, at least until he died.\xA0
+And now that he'd died, he was a hero that had been chosen by a god. Probably.\xA0
 "I heard that I still had a long life ahead of me, yet I died prematurely. Shouldn’t I receive at least this much from a god since I died so unfairly?"
 "Jeez, the novels these days have really spoilt these kids' backbone. Before, if I told them they were getting a second chance, they would go 'yippee' or yell 'call'."
 "Well, people change as the times go by."
-Though God wanted to hit Lee Shin Woo, who had nonchalantly nodded his head and replied to her, she restrained herself. After all, it was none other than her who had gathered the souls of those who had died unfairly, because she needed their help. 
+Though God wanted to hit Lee Shin Woo, who had nonchalantly nodded his head and replied to her, she restrained herself. After all, it was none other than her who had gathered the souls of those who had died unfairly, because she needed their help.\xA0
 'If he was from my world, then I would've just...'
-She was certainly a god, but she wasn't the god of Earth. She was the god who reigned over Heguroa, which differed in culture, history, size, and every other aspect from Earth. 
-Then why was she in a situation where she had to bring souls from another world? There was a truly sad, tear-jerking reason behind that. 
+She was certainly a god, but she wasn't the god of Earth. She was the god who reigned over Heguroa, which differed in culture, history, size, and every other aspect from Earth.\xA0
+Then why was she in a situation where she had to bring souls from another world? There was a truly sad, tear-jerking reason behind that.\xA0
 "Anyhow, those guys sure are cold-hearted. Their god is saying that she'll get herself involved and clean up their mess, but they're just avoiding it since they don't want to die."
 "There were a lot of heroes who accepted my revelation, you know!? ...They all just died in Heita."
 Lee Shin Woo instinctively gulped and asked God.
@@ -398,19 +397,19 @@ Lee Shin Woo instinctively gulped and asked God.
 "Of course, it is."
 God couldn't hide her bitterness, and responded for a second time, putting the tobacco pipe back into her mouth. If she didn't at least do that, she felt like she would've sighed in front of a human.
 This was a story that happened several decades ago. Heita, a great empire that thrived in the undergrounds of Heguroa, was met with tragedy. Their emperor, Jissehanu, dreamt of immortality and researched forbidden black magic, but as a consequence of his recklessness... the entire underground empire received an undead curse.
-What's worse, the curse would spread gradually, and if left unchecked, would devour the entire world. 
-God, recognizing the severity of the situation, passed down a divine revelation to all humans and promised that she would grant a wish to the savior of the Empire. 
-There were many heroic men who came forward. But all of them failed. The curse deeply rooted in the Empire was strong, and the heroes who headed underground in order to save the Empire couldn't overcome the curse, degenerating into the undead, and becoming a part of the undead empire. 
+What's worse, the curse would spread gradually, and if left unchecked, would devour the entire world.\xA0
+God, recognizing the severity of the situation, passed down a divine revelation to all humans and promised that she would grant a wish to the savior of the Empire.\xA0
+There were many heroic men who came forward. But all of them failed. The curse deeply rooted in the Empire was strong, and the heroes who headed underground in order to save the Empire couldn't overcome the curse, degenerating into the undead, and becoming a part of the undead empire.\xA0
 Only after did God decide to exhibit her power more extensively. She scattered and planted her power across the Empire, encouraging the heroes, but it didn't help. The influence of the Empire, which sought to lead all life to undeath, gradually increased, and devoured half of the continent...
-And that's when God, unable to endure any further, decided that she had to stop the Empire, even if it meant dragging heroes from other worlds. Lee Shin Woo was also one of them. 
+And that's when God, unable to endure any further, decided that she had to stop the Empire, even if it meant dragging heroes from other worlds. Lee Shin Woo was also one of them.\xA0
 "Still, an immortal body is impossible. Ask for something else."
 "Then please give me something similar."
 "Listen, kid."
-God raised her tobacco pipe and pointed at Lee Shin Woo's shabby soul as she explained. 
+God raised her tobacco pipe and pointed at Lee Shin Woo's shabby soul as she explained.\xA0
 "Tremendous power burdens the owner. An immortal body? Infinite growth potential? You won't be able to handle such power, and you'll just explode and die. So, go on and offer more realistic, and fitting conditions."
 "But with a realistic and fitting power, I'll probably end up like my seniors, dying without being able to do anything."
 "..."
-At that moment, the human's words thrust deep into the god's heart. Right now, Lee Shin Woo was practically declaring to the god that her 'struggles were meaningless'. Why should I hear this from a mere hero candidate? Should I just kill him? God momentarily felt the impulse to do just that, but... changed her mind upon seeing the human's challenging expression. 
+At that moment, the human's words thrust deep into the god's heart. Right now, Lee Shin Woo was practically declaring to the god that her 'struggles were meaningless'. Why should I hear this from a mere hero candidate? Should I just kill him? God momentarily felt the impulse to do just that, but... changed her mind upon seeing the human's challenging expression.\xA0
 This kid would have to go through hell before he could even understand her a little.
 "Alright, I'll do as you ask."
 "Yeah!"
@@ -419,33 +418,33 @@ This kid would have to go through hell before he could even understand her a lit
 "That's also up to you, but I'll make it so it's theoretically possible."
 "Oh!"
 "In exchange."
-God flicked her tobacco pipe, and ash flew through the air. 
+God flicked her tobacco pipe, and ash flew through the air.\xA0
 "You'll lose something very important. Your normal, physical body can't accept that power."
 "What exactly is that important thing? I'm not going to become impotent, or become bald, am I?"
 "This is the best I can do. Now... Lee Shin Woo. Are you going to do it, or not?"
 She didn't answer his question. He faced God's spiteful, cold eyes, and he briefly felt conflicted, but.... he ultimately nodded his head and spoke. Even if he were to become impotent, or become bald, there's a time when a man needs to take the risk!
 "Alright, I'll do it!"
 "Fine, then our contract has been established."
-God put the pipe into her mouth again, and simultaneously, Lee Shin Woo's body was enveloped in a bright light. Transmission magic that would transport his soul to the Heita Empire had been activated. 
+God put the pipe into her mouth again, and simultaneously, Lee Shin Woo's body was enveloped in a bright light. Transmission magic that would transport his soul to the Heita Empire had been activated.\xA0
 "You'll be sent to the entrance of the Empire. Once you arrive there, I won't be able to help you directly, but I'll send you quests instead. You know what quests are, right?"
 "Yes."
 "Good, and when you arrive, remember to check your status first. It's really important that you know who 'you' are."
 "Ok...?"
-It seemed as though God had grinned and laughed wickedly when she put the tobacco pipe into her mouth, but... he was soon shrouded by a bright light and was unable to see anything. 
-In the next moment, the light disappeared, and Lee Shin Woo's body was dumped onto the cold floor. The transfer was done in the blink of an eye. 
+It seemed as though God had grinned and laughed wickedly when she put the tobacco pipe into her mouth, but... he was soon shrouded by a bright light and was unable to see anything.\xA0
+In the next moment, the light disappeared, and Lee Shin Woo's body was dumped onto the cold floor. The transfer was done in the blink of an eye.\xA0
 "Oof! She could have let me down a little more gently... hoo."
-Lee Shin Woo grumbled softly and stood up. He had been dumped into an enormous underground cave, as expected of an underground empire. 
-There was a passageway on both of his sides, and it felt eerie as if mummies would pop out at any minute from all sides. At least there weren't any enemies nearby. 
+Lee Shin Woo grumbled softly and stood up. He had been dumped into an enormous underground cave, as expected of an underground empire.\xA0
+There was a passageway on both of his sides, and it felt eerie as if mummies would pop out at any minute from all sides. At least there weren't any enemies nearby.\xA0
 "I was ready for this, but... this feels really serious... it's cold, too."
 He felt cold, perhaps because he didn't have any clothes on. He stroked his skin in order to soothe the cold, but he soon realized that something was off.
 "Huh?"
-His body was hard. The hand that had touched his body was also really hard. When he raised his hand to see what was going on, there were bones, rather than a human hand. 
+His body was hard. The hand that had touched his body was also really hard. When he raised his hand to see what was going on, there were bones, rather than a human hand.\xA0
 "...Huh?"
-Shin Woo was so shocked that he went stiff for a while. He somehow got a hold of himself, and when he moved his hand, the bones naturally bobbed. The five fingers composed of bone truly began to dance rhythmically in the air. 
+Shin Woo was so shocked that he went stiff for a while. He somehow got a hold of himself, and when he moved his hand, the bones naturally bobbed. The five fingers composed of bone truly began to dance rhythmically in the air.\xA0
 "Hahaha... no way. Haha, this guy."
-It was such an unrealistic sight that he laughed automatically. For the first time, Lee Shin Woo bowed his head and observed his body, but his entire body was obviously all bone. 
+It was such an unrealistic sight that he laughed automatically. For the first time, Lee Shin Woo bowed his head and observed his body, but his entire body was obviously all bone.\xA0
 "..."
-The moment he saw that his mind blanked. 
+The moment he saw that his mind blanked.\xA0
 What do I do? Is this by any chance God's mistake? Did I perhaps receive the Empire's curse as soon as I arrived, and became an undead? Then, he remembered what God had said before their sudden parting.
 "That's it. Status... She told me to check my status as soon as I arrived."
 The moment Shin Woo said the word status, as though he had just grabbed onto a final strand of hope, a strange row of text was engraved in the air in front of him. It was similar to what he had often seen in the games when he was alive. Yeah, even the contents written within...
@@ -456,7 +455,7 @@ The moment Shin Woo said the word status, as though he had just grabbed onto a f
 [Passive skills - Invisible Heart Lv1]
 [Active skills - Bone Reinforcement Lv1]
 "..."
-The wind passed by his smooth (bald) skull, and his empty (impotent) crotch. 
+The wind passed by his smooth (bald) skull, and his empty (impotent) crotch.\xA0
 It only took around... 10 minutes before Lee Shin Woo figured out that this was neither God's mistake, nor the Empire's curse.
 """.replace('\n', ''),
                          chapter.content.text)
