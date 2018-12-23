@@ -12,6 +12,12 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
 
     def _parse(self, document: BeautifulSoup):
         head = document.select_one('head')
+        if head.select_one('meta[name=description]').get('content') is None:
+            self.success = False
+            return
+        else:
+            self.success = True
+        assert head.select_one('script[type=application/ld+json]') is not None
         json_str = head.select_one('script[type=application/ld+json]').text
         json_data = json.loads(json_str)
         self.translator = json_data['author']['name']
@@ -52,6 +58,8 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                         # self.log.debug("Empty paragraph.")
                         pass
                     else:
+                        if child.text == '\nNext Chapter\n':
+                            break
                         new_content.append(child.__copy__())
                         tags_cnt += 1
                         if tags_cnt <= max_tags_cnt and title in child.text.strip('\n '):
@@ -63,7 +71,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                     # self.log.debug('Rule reached.')
                     break
                 else:
-                    self.log.error("Unexpected tag name: {}".format(child))
+                    raise Exception("Unexpected tag name: {}".format(child))
             else:
-                self.log.error("Unexpected type: {}".format(child))
+                raise Exception("Unexpected type: {}".format(child))
         return new_content
