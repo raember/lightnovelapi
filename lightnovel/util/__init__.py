@@ -2,6 +2,7 @@ import re
 import unicodedata
 
 from .sink import HtmlSink, StringHtmlSink, MarkdownHtmlSink, LatexHtmlSink
+from .proxy import Proxy
 
 
 def slugify(value, allow_unicode=False):
