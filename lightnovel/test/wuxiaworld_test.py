@@ -1,16 +1,21 @@
+import os
+import unittest
 from typing import List
 
 from lightnovel.test.test_config import HarTestCase, Hars
 from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
+from util import Proxy
 
 
-class WuxiaWorldApiHjcTest(HarTestCase):
+class WuxiaWorldApiHjcTest(unittest.TestCase):
+
     @classmethod
-    def get_har_filename(cls) -> List[str]:
-        return Hars.WW_HJC_COVER_C1_2.value
+    def setUpClass(cls):
+        cls.proxy = Proxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
+        cls.proxy.load()
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         novel = api.get_novel('/novel/heavenly-jewel-change')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
@@ -82,7 +87,7 @@ class WuxiaWorldApiHjcTest(HarTestCase):
         self.assertEqual(697, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         chapter = api.get_chapter('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
@@ -126,7 +131,7 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
                          chapter.content.text)
 
     def test_parsing_chapter_2(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         chapter = api.get_chapter('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
@@ -169,13 +174,15 @@ With a cold flash, the tip of the sword was resting on Zhou Weiqing’s throat, 
                          chapter.content.text)
 
 
-class WuxiaWorldApiWmwTest(HarTestCase):
+class WuxiaWorldApiWmwTest(unittest.TestCase):
+
     @classmethod
-    def get_har_filename(cls) -> List[str]:
-        return Hars.WW_WMW_COVER_C1.value
+    def setUpClass(cls):
+        cls.proxy = Proxy(os.path.join(*Hars.WW_WMW_COVER_C1.value))
+        cls.proxy.load()
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         novel = api.get_novel('/novel/warlock-of-the-magus-world')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
@@ -224,7 +231,7 @@ class WuxiaWorldApiWmwTest(HarTestCase):
         self.assertEqual(157, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         chapter = api.get_chapter('/novel/warlock-of-the-magus-world/wmw-chapter-1')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
@@ -314,13 +321,15 @@ Still, he did not leave. No matter what, he still had to eat.
                          chapter.content.text)
 
 
-class WuxiaWorldApiSFFTest(HarTestCase):
+class WuxiaWorldApiSFFTest(unittest.TestCase):
+
     @classmethod
-    def get_har_filename(cls) -> List[str]:
-        return Hars.WW_SFF_Cover_C1_78F.value
+    def setUpClass(cls):
+        cls.proxy = Proxy(os.path.join(*Hars.WW_SFF_Cover_C1_78F.value))
+        cls.proxy.load()
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         novel = api.get_novel('/novel/stop-friendly-fire')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
@@ -360,7 +369,7 @@ class WuxiaWorldApiSFFTest(HarTestCase):
         self.assertEqual(0, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self._request)
+        api = WuxiaWorldApi(self.proxy.request)
         chapter = api.get_chapter('/novel/stop-friendly-fire/sff-chapter-1')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
