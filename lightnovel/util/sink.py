@@ -92,7 +92,13 @@ class MarkdownHtmlSink(HtmlSink):
 class LatexHtmlSink(HtmlSink):
 
     def parse_navigable_string(self, string: NavigableString) -> str:
-        string = re.sub(r"[{}\\$]", '\\$1', string)
+        string = string.strip('\n\t ')
+        string = re.sub(r"–", '–', string)
+        string = re.sub(r"([%&#\[\]{}\\$])", r'\\\1', string)
+        string = re.sub(r"…(…(\.|)|)", '...', string)
+        string = re.sub(r"\b\.\.\.\b", '...', string)
+        string = re.sub(r"\.\.\.\.+", '...', string)
+        string = re.sub(r"(?<=[^!?\"]) (?=[,.!?])", '', string)
         return string
 
     def parse_paragraph(self, tag: Tag) -> str:
