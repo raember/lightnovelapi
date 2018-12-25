@@ -16,13 +16,11 @@ def ipinfo():
     return request('GET', 'https://ipinfo.io/json').json()
 
 
-class LogBase:
+class LightNovelEntity:
+    host = ''
+
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
-
-
-class LightNovelEntity(LogBase):
-    host = ''
 
     def get_url(self, path=''):
         return self.host + path
@@ -124,18 +122,45 @@ class LightNovelApi(LightNovelEntity):
         os.mkdir(FOLDER)
         os.mkdir(path)
         index = 0
-        chapter_titles = []
+        chapter_filenames_noext = []
         converter = LatexHtmlSink()
         for chapter in chapters:
             index += 1
             chapter_title = slugify(chapter.title)
-            chapter_path = os.path.join(path, "{}_{}.tex".format(index, chapter_title))
-            chapter_titles.append(chapter_title)
+            chapter_filename_noext = "{}_{}".format(index, chapter_title)
+            chapter_path = os.path.join(path, chapter_filename_noext + '.tex')
+            chapter_filenames_noext.append(chapter_filename_noext)
             with open(chapter_path, 'w') as f:
-                f.write("\\section{{{}}}\n{}".format(chapter_title, converter.parse(chapter.content)))
-        with open(os.path.join(FOLDER, novel_title, chapter_title + '.tex'), 'w') as f:
-            f.write("""\\documentclass{{article}}
-\\begin{{document}}""".format(novel_title))
-            for chapter_title in chapter_titles:
+                f.write("\\chapter{{{}}}\n{}".format(chapter.title, converter.parse(chapter.content)))
+        with open(os.path.join(FOLDER, novel_title, novel_title + '.tex'), 'w') as f:
+            f.write("""\\documentclass[oneside,11pt]{{memoir}}
+\\input{{structure.tex}}
+\\title{{{}}}
+\\author{{{}}}
+\\newcommand{{\\edition}}{{}}
+\\makeatletter\\@addtoreset{{chapter}}{{part}}\makeatother%
+\\begin{{document}}
+\\thispagestyle{{empty}}
+%\\ThisCenterWallPaper{{1.12}}{{cover.jpg}}
+\\begin{{tikzpicture}}[remember picture,overlay]
+\\node [rectangle, rounded corners, fill=white, opacity=0.75, anchor=south west, minimum width=4cm, minimum height=3cm] (box) at (-0.5,-10) (box){{}};
+\\node[anchor=west, color01, xshift=-2cm, yshift=-0.8cm, text width=3.9cm, font=\\sffamily\\bfseries\\scshape\\Large] at (box.north){{\\thetitle}};
+\\node[anchor=west, color01, xshift=-2cm, yshift=-1.8cm, text width=3.9cm, font=\\sffamily\\scriptsize] at (box.north){{\\edition}};
+\\node[anchor=west, color01, xshift=-2cm, yshift=-2.5cm, text width=3.9cm, font=\\sffamily\\bfseries] at (box.north){{\\theauthor}};
+\\end{{tikzpicture}}
+\\newpage
+
+\\tableofcontents
+
+\\chapter*{{Synopsis}}
+{}
+\\newpage
+""".format(
+                novel.title,
+                novel.translator,
+                converter.parse(novel.description)
+            ))
+            for chapter_title in chapter_filenames_noext:
                 f.write("\\include{{{}}}\n".format(chapter_title))
             f.write("\\end{document}")
+        shutil.copyfile('structure.tex', os.path.join(FOLDER, novel_title, 'structure.tex'))
