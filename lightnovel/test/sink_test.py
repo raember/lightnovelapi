@@ -5,14 +5,14 @@ from typing import List
 from lightnovel import WuxiaWorldApi
 import lightnovel.util as util
 from lightnovel.test.test_config import Hars
-from util import Proxy
+from util import HarProxy
 
 
 class HJCSinkTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = Proxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
         cls.proxy.load()
 
     def test_parsing_hjc_description_as_string(self):

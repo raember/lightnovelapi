@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import time
+from datetime import datetime
 from typing import List, Tuple
 import requests
 from bs4 import Tag, BeautifulSoup
@@ -28,13 +29,25 @@ class LightNovelEntity:
 
 class LightNovelPage(LightNovelEntity):
     path = ''
+    document = None
+    success = False
 
     def __init__(self, document: BeautifulSoup):
         super().__init__()
         self.log.debug('Extracting data from html.')
-        self._parse(document)
+        self.document = document
+        self.success = self.parse(document)
 
-    def _parse(self, document: BeautifulSoup):
+    def parse(self, document: BeautifulSoup = None) -> bool:
+        if not document:
+            document = self.document
+        try:
+            return self._parse(document)
+        except Exception as e:
+            self.log.error(e)
+            return False
+
+    def _parse(self, document: BeautifulSoup) -> bool:
         raise NotImplementedError('Must be overwritten')
 
     def get_url(self, path: str = None):
@@ -50,7 +63,6 @@ class Chapter(LightNovelPage):
     previous_chapter_path = ''
     next_chapter_path = ''
     content: Tag = None
-    success = False
 
 
 class ChapterEntry:
@@ -89,17 +101,26 @@ class LightNovelApi(LightNovelEntity):
         return Chapter(self._get_document(chapter_path))
 
     def get_whole_novel(self, novel_path: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
+        # self.log.info('test')
+        # self.log.debug('test')
+        # self.log.warning('test')
+        # self.log.error('test')
+        # exit(0)
         novel = self.get_novel(novel_path)
+        if not novel.success:
+            self.log.warning("Couldn't parse novel page. No chapters will be extracted.")
+            return novel, []
         chapters = []
         chapter = None
         for book in novel.books:
             for chapter_entry in book.chapters:
                 chapter = self.get_chapter(chapter_entry.path)
                 if not chapter.success:
-                    self.log.warning("Failed verifying chapter.")
-                    continue
+                    self.log.warning("Failed parsing chapter.")
                 time.sleep(delay)
                 chapters.append(chapter)
+            #     break
+            # break
         while chapter.success and chapter.next_chapter_path:
             self.log.debug("Following existing next chapter link({}).".format(chapter.next_chapter_path))
             chapter = self.get_chapter(chapter.next_chapter_path)
@@ -108,6 +129,7 @@ class LightNovelApi(LightNovelEntity):
                 break
             time.sleep(delay)
             chapters.append(chapter)
+            # break
         return novel, chapters
 
     def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter]):
