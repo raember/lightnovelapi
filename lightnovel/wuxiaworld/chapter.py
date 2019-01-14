@@ -37,6 +37,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
         if self.title == '':
             self.log.warning("Couldn't extract data from CHAPTER variable.")
         self.content = self._process_content(document.select_one('div.p-15 div.fr-view'), self.title)
+        return True
 
     def _process_content(self, content: Tag, title: str) -> Tag:
         new_content = BeautifulSoup(features="html5lib")
