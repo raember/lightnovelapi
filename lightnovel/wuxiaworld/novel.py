@@ -18,7 +18,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
     books: List[WuxiaWorldBook] = []
     tags: List[str] = []
 
-    def _parse(self, document: BeautifulSoup):
+    def _parse(self, document: BeautifulSoup) -> bool:
         head = document.select_one('head')
         json_data = json.loads(head.select_one('script[type=application/ld+json]').text)
         self.title = json_data['name']
@@ -33,6 +33,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         self.tags = self.__extract_tags(p15)
         self.description = p15.select('div.fr-view')[1]
         self.books = self.__extract_books(p15)
+        return True
 
     def __extract_tags(self, p15: Tag) -> List[str]:
         tags = []

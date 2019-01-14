@@ -1,17 +1,16 @@
 import os
 import unittest
-from typing import List
 
-from lightnovel.test.test_config import HarTestCase, Hars
+from lightnovel.test.test_config import Hars
 from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
-from util import Proxy
+from util import HarProxy
 
 
 class WuxiaWorldApiHjcTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = Proxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
         cls.proxy.load()
 
     def test_parsing_novel(self):
@@ -178,7 +177,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = Proxy(os.path.join(*Hars.WW_WMW_COVER_C1.value))
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_WMW_COVER_C1.value))
         cls.proxy.load()
 
     def test_parsing_novel(self):
@@ -325,7 +324,7 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = Proxy(os.path.join(*Hars.WW_SFF_Cover_C1_78F.value))
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_SFF_Cover_C1_78F.value))
         cls.proxy.load()
 
     def test_parsing_novel(self):
