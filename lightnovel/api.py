@@ -2,19 +2,9 @@ import logging
 import os
 import shutil
 import time
-from datetime import datetime
 from typing import List, Tuple
-import requests
 from bs4 import Tag, BeautifulSoup
-from util import slugify
-
-
-def request(method: str, url: str, **kwargs) -> requests.Response:
-    return requests.request(method, url, **kwargs)
-
-
-def ipinfo():
-    return request('GET', 'https://ipinfo.io/json').json()
+from util import slugify, request
 
 
 class LightNovelEntity:
@@ -101,11 +91,6 @@ class LightNovelApi(LightNovelEntity):
         return Chapter(self._get_document(chapter_path))
 
     def get_whole_novel(self, novel_path: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
-        # self.log.info('test')
-        # self.log.debug('test')
-        # self.log.warning('test')
-        # self.log.error('test')
-        # exit(0)
         novel = self.get_novel(novel_path)
         if not novel.success:
             self.log.warning("Couldn't parse novel page. No chapters will be extracted.")

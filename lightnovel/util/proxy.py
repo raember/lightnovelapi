@@ -8,6 +8,14 @@ from util import slugify
 import requests
 
 
+def request(method: str, url: str, **kwargs) -> requests.Response:
+    return requests.request(method, url, **kwargs)
+
+
+def ipinfo():
+    return request('GET', 'https://ipinfo.io/json').json()
+
+
 class Proxy:
     path = ''
 
