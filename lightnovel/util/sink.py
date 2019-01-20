@@ -22,6 +22,9 @@ class HtmlSink:
     def parse_child_tag(self, tag: Tag) -> str:
         if tag.name in ['p', 'div', 'a']:
             return self.parse_paragraph(tag)
+        elif tag.name == 'blockquote':
+            print(tag.contents)
+            return self.parse_paragraph(tag.contents[0])
         elif tag.name == 'hr':
             return self.parse_horizontal_rule(tag)
         else:
@@ -47,7 +50,9 @@ class HtmlSink:
                     string += self.parse_strong(subtag)
                 elif subtag.name in ['a', 'span', 'sup']:
                     string += self.parse_link(subtag)
-                elif subtag.name in ['br']:
+                elif subtag.name in ['p']:
+                    string += self.parse_paragraph(tag.contents[0])
+                elif subtag.name in ['br', 'img']:
                     pass
                 else:
                     raise Exception("Unknown tag type: {}({})".format(subtag.name, subtag))
@@ -94,15 +99,17 @@ class LatexHtmlSink(HtmlSink):
     def parse_navigable_string(self, string: NavigableString) -> str:
         string = string.strip('\n\t ')
         string = re.sub(r"–", '–', string)
-        string = re.sub(r"([%&#\[\]{}\\$])", r'\\\1', string)
+        string = re.sub(r"([&%$#_{}])", r'\\\1', string)  # &%$#_{}
         string = re.sub(r"…(…(\.|)|)", '...', string)
         string = re.sub(r"\b\.\.\.\b", '...', string)
+        string = re.sub(r"~", '\\textasciitilde', string)
+        string = re.sub(r"\^", '\\textasciicircum', string)
         string = re.sub(r"\.\.\.\.+", '...', string)
         string = re.sub(r"(?<=[^!?\"]) (?=[,.!?])", '', string)
         return string
 
     def parse_paragraph(self, tag: Tag) -> str:
-        return "{}\\\\".format(self.parse_sub_tag(tag))
+        return "{}\\\\ \\relax".format(self.parse_sub_tag(tag))
 
     def parse_horizontal_rule(self, tag: Tag) -> str:
         return '\\hrule'

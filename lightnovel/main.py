@@ -1,4 +1,4 @@
-from lightnovel import WuxiaWorldApi
+from lightnovel.wuxiaworld import WuxiaWorldApi
 from util import slugify, HtmlProxy
 import os
 import logging
