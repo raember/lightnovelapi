@@ -4,7 +4,8 @@ import shutil
 import time
 from typing import List, Tuple
 from bs4 import Tag, BeautifulSoup
-from util import slugify, request
+import lightnovel.util.text as textutil
+import lightnovel.util.proxy as proxyutil
 
 
 class LightNovelEntity:
@@ -75,7 +76,7 @@ class Novel(LightNovelPage):
 
 
 class LightNovelApi(LightNovelEntity):
-    def __init__(self, request_method=request):
+    def __init__(self, request_method=proxyutil.request):
         super().__init__()
         self._request = request_method
 
@@ -122,7 +123,7 @@ class LightNovelApi(LightNovelEntity):
         FOLDER = 'out'
         if os.path.isdir(FOLDER):
             shutil.rmtree(FOLDER)
-        novel_title = slugify(novel.title)
+        novel_title = textutil.slugify(novel.title)
         path = os.path.join(FOLDER, novel_title)
         if os.path.isdir(path):
             shutil.rmtree(path)
@@ -133,7 +134,7 @@ class LightNovelApi(LightNovelEntity):
         converter = LatexHtmlSink()
         for chapter in chapters:
             index += 1
-            chapter_title = slugify(chapter.title)
+            chapter_title = textutil.slugify(chapter.title)
             chapter_filename_noext = "{}_{}".format(index, chapter_title)
             chapter_path = os.path.join(path, chapter_filename_noext + '.tex')
             chapter_filenames_noext.append(chapter_filename_noext)

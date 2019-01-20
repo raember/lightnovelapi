@@ -1,11 +1,12 @@
 from urllib3.util import parse_url
-from lightnovel import LightNovelApi, WuxiaWorldApi
+import lightnovel.api as lnapi
+import lightnovel.wuxiaworld.api as wwapi
 from util import request
 
 
-def get_api(url: str, request_method=request) -> LightNovelApi:
+def get_api(url: str, request_method=request) -> lnapi.LightNovelApi:
     apis = [
-        WuxiaWorldApi(request_method)
+        wwapi.WuxiaWorldApi(request_method)
     ]
     parsed = parse_url(url)
     for api in apis:

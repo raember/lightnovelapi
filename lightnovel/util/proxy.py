@@ -3,7 +3,7 @@ import logging
 import os
 from typing import List, Dict
 from urllib3.util.url import parse_url
-from util import slugify
+import lightnovel.util.text as textutil
 
 import requests
 
@@ -88,10 +88,10 @@ class HtmlProxy(Proxy):
         if len(parsed.path.split('/')) == 2:
             filepath = os.path.join(self.path, 'index.html')
         else:
-            filepath = os.path.join(self.path, slugify(parsed.path.replace('/', '_')) + ".html")
-        self.log.warning(parsed.path)
-        self.log.warning(slugify(parsed.path.replace('/', '_')) + ".html")
-        self.log.warning(filepath)
+            filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
+        # self.log.warning(parsed.path)
+        # self.log.warning(textutil.slugify(parsed.path.replace('/', '_')) + ".html")
+        # self.log.warning(filepath)
         if not os.path.isfile(filepath):
             raise LookupError("No entry found")
         with open(filepath, 'r') as fp:
