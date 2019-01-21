@@ -27,6 +27,9 @@ for filename in os.listdir("data"):
                     continue
             else:
                 continue
+            headers = {}
+            for header in response['headers']:
+                headers[header['name']] = header['value']
             entries.append({
                 'request': {
                     'method': request['method'],
@@ -36,6 +39,7 @@ for filename in os.listdir("data"):
                     'status': response['status'],
                     'content': response['content'],
                     'cookies': response['cookies'],
+                    'headers': headers,
                     'redirectURL': response['redirectURL']
                 }
             })
