@@ -9,49 +9,49 @@ class HtmlSink:
         strings = []
         for child in html.children:
             if type(child) == NavigableString:
-                strings.append(self.parse_navigable_string(child))
+                strings.append(self._parse_navigable_string(child))
             elif type(child) == Tag:
-                strings.append(self.parse_child_tag(child))
+                strings.append(self._parse_child_tag(child))
             else:
                 raise Exception("Unknown object type: {}".format(type(child)))
-        return self.join_strings(strings)
+        return self._join_strings(strings)
 
-    def join_strings(self, strings: List[str]) -> str:
+    def _join_strings(self, strings: List[str]) -> str:
         return str.join('\n', strings).strip()
 
-    def parse_child_tag(self, tag: Tag) -> str:
+    def _parse_child_tag(self, tag: Tag) -> str:
         if tag.name in ['p', 'div', 'a']:
-            return self.parse_paragraph(tag)
+            return self._parse_paragraph(tag)
         elif tag.name == 'blockquote':
             print(tag.contents)
-            return self.parse_paragraph(tag.contents[0])
+            return self._parse_paragraph(tag.contents[0])
         elif tag.name == 'hr':
-            return self.parse_horizontal_rule(tag)
+            return self._parse_horizontal_rule(tag)
         else:
             raise Exception("Unknown child tag name: {}".format(tag.name))
 
-    def parse_navigable_string(self, string: NavigableString) -> str:
+    def _parse_navigable_string(self, string: NavigableString) -> str:
         return string.__str__()
 
-    def parse_paragraph(self, tag: Tag) -> str:
-        return self.parse_sub_tag(tag)
+    def _parse_paragraph(self, tag: Tag) -> str:
+        return self._parse_sub_tag(tag)
 
-    def parse_sub_tag(self, tag: Tag) -> str:
+    def _parse_sub_tag(self, tag: Tag) -> str:
         string = ''
         for subtag in tag.children:
             if type(subtag) == NavigableString:
                 subtag: NavigableString
-                string += self.parse_navigable_string(subtag)
+                string += self._parse_navigable_string(subtag)
             elif type(subtag) == Tag:
                 subtag: Tag
                 if subtag.name in ['em', 'i']:
-                    string += self.parse_italics(subtag)
+                    string += self._parse_italics(subtag)
                 elif subtag.name in ['strong', 'b']:
-                    string += self.parse_strong(subtag)
+                    string += self._parse_strong(subtag)
                 elif subtag.name in ['a', 'span', 'sup']:
-                    string += self.parse_link(subtag)
+                    string += self._parse_link(subtag)
                 elif subtag.name in ['p']:
-                    string += self.parse_paragraph(tag.contents[0])
+                    string += self._parse_paragraph(tag.contents[0])
                 elif subtag.name in ['br', 'img']:
                     pass
                 else:
@@ -60,46 +60,46 @@ class HtmlSink:
                 raise Exception("Unknown object type: {}".format(type(subtag)))
         return string
 
-    def parse_horizontal_rule(self, tag: Tag) -> str:
+    def _parse_horizontal_rule(self, tag: Tag) -> str:
         raise NotImplementedError('Must be overwritten.')
 
-    def parse_strong(self, tag: Tag) -> str:
+    def _parse_strong(self, tag: Tag) -> str:
         raise NotImplementedError('Must be overwritten.')
 
-    def parse_italics(self, tag: Tag) -> str:
+    def _parse_italics(self, tag: Tag) -> str:
         raise NotImplementedError('Must be overwritten.')
 
-    def parse_link(self, tag: Tag) -> str:
-        return self.parse_sub_tag(tag)
+    def _parse_link(self, tag: Tag) -> str:
+        return self._parse_sub_tag(tag)
 
 
 class StringHtmlSink(HtmlSink):
 
-    def parse_child_tag(self, tag: Tag) -> str:
+    def _parse_child_tag(self, tag: Tag) -> str:
         return tag.text.strip()
 
 
 class MarkdownHtmlSink(HtmlSink):
 
-    def join_strings(self, strings: List[str]) -> str:
+    def _join_strings(self, strings: List[str]) -> str:
         return str.join('\n\n', strings).strip()
 
-    def parse_horizontal_rule(self, tag: Tag) -> str:
+    def _parse_horizontal_rule(self, tag: Tag) -> str:
         return '---'
 
-    def parse_italics(self, tag: Tag) -> str:
-        return "_{}_".format(self.parse_sub_tag(tag))
+    def _parse_italics(self, tag: Tag) -> str:
+        return "_{}_".format(self._parse_sub_tag(tag))
 
-    def parse_strong(self, tag: Tag) -> str:
-        return "**{}**".format(self.parse_sub_tag(tag))
+    def _parse_strong(self, tag: Tag) -> str:
+        return "**{}**".format(self._parse_sub_tag(tag))
 
 
 class LatexHtmlSink(HtmlSink):
 
-    def parse_navigable_string(self, string: NavigableString) -> str:
+    def _parse_navigable_string(self, string: NavigableString) -> str:
         string = string.strip('\n\t ')
         string = re.sub(r"–", '–', string)
-        string = re.sub(r"([&%$#_{}])", r'\\\1', string)  # &%$#_{}
+        string = re.sub(r"([&%$#_{}])", r'\\\1', string)
         string = re.sub(r"…(…(\.|)|)", '...', string)
         string = re.sub(r"\b\.\.\.\b", '...', string)
         string = re.sub(r"~", '\\textasciitilde', string)
@@ -108,14 +108,14 @@ class LatexHtmlSink(HtmlSink):
         string = re.sub(r"(?<=[^!?\"]) (?=[,.!?])", '', string)
         return string
 
-    def parse_paragraph(self, tag: Tag) -> str:
-        return "{}\\\\ \\relax".format(self.parse_sub_tag(tag))
+    def _parse_paragraph(self, tag: Tag) -> str:
+        return "{}\\\\ \\relax".format(self._parse_sub_tag(tag))
 
-    def parse_horizontal_rule(self, tag: Tag) -> str:
+    def _parse_horizontal_rule(self, tag: Tag) -> str:
         return '\\hrule'
 
-    def parse_italics(self, tag: Tag) -> str:
-        return "\\textit{{{}}}".format(self.parse_sub_tag(tag))
+    def _parse_italics(self, tag: Tag) -> str:
+        return "\\textit{{{}}}".format(self._parse_sub_tag(tag))
 
-    def parse_strong(self, tag: Tag) -> str:
-        return "\\textbf{{{}}}".format(self.parse_sub_tag(tag))
+    def _parse_strong(self, tag: Tag) -> str:
+        return "\\textbf{{{}}}".format(self._parse_sub_tag(tag))

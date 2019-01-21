@@ -13,7 +13,7 @@ logging.basicConfig(
 FOLDER = os.path.join('test', 'data', slugify("heavenly-jewel-change"))
 
 # api = WuxiaWorldApi()
-# novel, chapters = api.get_whole_novel('/novel/heavenly-jewel-change', 1.0)
+# novel, chapters = api.get_whole_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change', 1.0)
 
 # if os.path.isdir(FOLDER):
 #     shutil.rmtree(FOLDER)
@@ -30,7 +30,7 @@ FOLDER = os.path.join('test', 'data', slugify("heavenly-jewel-change"))
 proxy = HtmlProxy(FOLDER)
 proxy.load()
 api = WuxiaWorldApi(proxy.request)
-novel, chapters = api.get_whole_novel('/novel/heavenly-jewel-change', 0.0)
+novel, chapters = api.get_whole_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change', 0.0)
 api.compile_to_latex_pdf(novel, chapters)
 
 # api.compile_to_latex_pdf(novel, chapters)
