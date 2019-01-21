@@ -141,9 +141,9 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
 
 
 class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
+    # Search: /api/novels/search?query=the&count=5
+    def get_novel(self, url: str) -> WuxiaWorldNovel:
+        return WuxiaWorldNovel(self._get_document(url))
 
-    def get_novel(self, novel_path: str) -> WuxiaWorldNovel:
-        return WuxiaWorldNovel(self._get_document(novel_path))
-
-    def get_chapter(self, chapter_path: str) -> WuxiaWorldChapter:
-        return WuxiaWorldChapter(self._get_document(chapter_path))
+    def get_chapter(self, url: str) -> WuxiaWorldChapter:
+        return WuxiaWorldChapter(self._get_document(url))

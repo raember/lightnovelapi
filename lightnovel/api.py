@@ -4,6 +4,8 @@ import shutil
 import time
 from typing import List, Tuple
 from bs4 import Tag, BeautifulSoup
+from urllib3.util import parse_url
+
 import lightnovel.util.text as textutil
 import lightnovel.util.proxy as proxyutil
 
@@ -25,18 +27,18 @@ class LightNovelPage(LightNovelEntity):
 
     def __init__(self, document: BeautifulSoup):
         super().__init__()
-        self.log.debug('Extracting data from html.')
         self.document = document
-        self.success = self.parse(document)
 
     def parse(self, document: BeautifulSoup = None) -> bool:
         if not document:
             document = self.document
         try:
-            return self._parse(document)
+            self.success = self._parse(document)
         except Exception as e:
             self.log.error(e)
-            return False
+            self.success = False
+        finally:
+            return self.success
 
     def _parse(self, document: BeautifulSoup) -> bool:
         raise NotImplementedError('Must be overwritten')
@@ -76,24 +78,24 @@ class Novel(LightNovelPage):
 
 
 class LightNovelApi(LightNovelEntity):
-    def __init__(self, request_method=proxyutil.request):
+    def __init__(self, request_method=proxyutil.DirectProxy('').request):
         super().__init__()
         self._request = request_method
 
-    def _get_document(self, path: str) -> BeautifulSoup:
-        response = self._request('GET', self.get_url(path))
+    def _get_document(self, url: str) -> BeautifulSoup:
+        response = self._request('GET', url)
         response.raise_for_status()
         return BeautifulSoup(response.text, features="html5lib")
 
-    def get_novel(self, novel_path: str) -> Novel:
-        return Novel(self._get_document(novel_path))
+    def get_novel(self, url: str) -> Novel:
+        return Novel(self._get_document(url))
 
-    def get_chapter(self, chapter_path: str) -> Chapter:
-        return Chapter(self._get_document(chapter_path))
+    def get_chapter(self, url: str) -> Chapter:
+        return Chapter(self._get_document(url))
 
-    def get_whole_novel(self, novel_path: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
-        novel = self.get_novel(novel_path)
-        if not novel.success:
+    def get_whole_novel(self, url: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
+        novel = self.get_novel(url)
+        if not novel.parse():
             self.log.warning("Couldn't parse novel page. No chapters will be extracted.")
             return novel, []
         chapters = []
@@ -101,7 +103,7 @@ class LightNovelApi(LightNovelEntity):
         for book in novel.books:
             for chapter_entry in book.chapters:
                 chapter = self.get_chapter(chapter_entry.path)
-                if not chapter.success:
+                if not chapter.parse():
                     self.log.warning("Failed parsing chapter.")
                 time.sleep(delay)
                 chapters.append(chapter)
@@ -110,7 +112,7 @@ class LightNovelApi(LightNovelEntity):
         while chapter.success and chapter.next_chapter_path:
             self.log.debug("Following existing next chapter link({}).".format(chapter.next_chapter_path))
             chapter = self.get_chapter(chapter.next_chapter_path)
-            if not chapter.success:
+            if not chapter.parse():
                 self.log.warning("Failed verifying chapter.")
                 break
             time.sleep(delay)
@@ -172,3 +174,16 @@ class LightNovelApi(LightNovelEntity):
                 f.write("\\include{{{}}}\n".format(chapter_title))
             f.write("\\end{document}")
         shutil.copyfile('structure.tex', os.path.join(FOLDER, novel_title, 'structure.tex'))
+
+    @staticmethod
+    def get_api(url: str, request_method=proxyutil.DirectProxy('').request):
+        from wuxiaworld import WuxiaWorldApi
+        apis = [
+            WuxiaWorldApi(request_method)
+        ]
+        parsed = parse_url(url)
+        for api in apis:
+            label = parse_url(api.host)
+            if parsed.host == label.host:
+                return api
+        raise LookupError("No api found for url {}.".format(url))

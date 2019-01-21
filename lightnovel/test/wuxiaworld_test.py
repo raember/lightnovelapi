@@ -15,9 +15,12 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy.request)
-        novel = api.get_novel('/novel/heavenly-jewel-change')
+        novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
+        self.assertFalse(novel.success)
+        self.assertTrue(novel.parse())
+        self.assertTrue(novel.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', novel.get_url())
         self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
         self.assertEqual('Heavenly Jewel Change', novel.title)
@@ -87,9 +90,12 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
 
     def test_parsing_chapter_1(self):
         api = WuxiaWorldApi(self.proxy.request)
-        chapter = api.get_chapter('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
+        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertFalse(chapter.success)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01',
                          chapter.get_url())
         self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
@@ -131,9 +137,12 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
 
     def test_parsing_chapter_2(self):
         api = WuxiaWorldApi(self.proxy.request)
-        chapter = api.get_chapter('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
+        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertFalse(chapter.success)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02',
                          chapter.get_url())
         self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
@@ -182,8 +191,11 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy.request)
-        novel = api.get_novel('/novel/warlock-of-the-magus-world')
+        novel = api.get_novel('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world')
         self.assertIsNotNone(novel)
+        self.assertFalse(novel.success)
+        self.assertTrue(novel.parse())
+        self.assertTrue(novel.success)
         self.assertEqual(WuxiaWorldNovel, type(novel))
         self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', novel.get_url())
         self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
@@ -231,9 +243,12 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
 
     def test_parsing_chapter_1(self):
         api = WuxiaWorldApi(self.proxy.request)
-        chapter = api.get_chapter('/novel/warlock-of-the-magus-world/wmw-chapter-1')
+        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertFalse(chapter.success)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.get_url())
         self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
         self.assertEqual("Chapter 1", chapter.title)
@@ -329,9 +344,12 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy.request)
-        novel = api.get_novel('/novel/stop-friendly-fire')
+        novel = api.get_novel('https://www.wuxiaworld.com/novel/stop-friendly-fire')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
+        self.assertFalse(novel.success)
+        self.assertTrue(novel.parse())
+        self.assertTrue(novel.success)
         self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
         self.assertEqual('/novel/stop-friendly-fire', novel.path)
         self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire', novel.get_url())
@@ -369,9 +387,12 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
 
     def test_parsing_chapter_1(self):
         api = WuxiaWorldApi(self.proxy.request)
-        chapter = api.get_chapter('/novel/stop-friendly-fire/sff-chapter-1')
+        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
+        self.assertFalse(chapter.success)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1', chapter.get_url())
         self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
         self.assertEqual("Prologue. This Trade is a Draw", chapter.title)
