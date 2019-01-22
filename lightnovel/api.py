@@ -24,6 +24,7 @@ class LightNovelPage(LightNovelEntity):
     path = ''
     document = None
     success = False
+    name = 'generic'
 
     def __init__(self, document: BeautifulSoup):
         super().__init__()
@@ -102,7 +103,7 @@ class LightNovelApi(LightNovelEntity):
         chapter = None
         for book in novel.books:
             for chapter_entry in book.chapters:
-                chapter = self.get_chapter(chapter_entry.path)
+                chapter = self.get_chapter(self.get_url(chapter_entry.path))
                 if not chapter.parse():
                     self.log.warning("Failed parsing chapter.")
                 time.sleep(delay)
@@ -111,7 +112,7 @@ class LightNovelApi(LightNovelEntity):
             # break
         while chapter.success and chapter.next_chapter_path:
             self.log.debug("Following existing next chapter link({}).".format(chapter.next_chapter_path))
-            chapter = self.get_chapter(chapter.next_chapter_path)
+            chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
             if not chapter.parse():
                 self.log.warning("Failed verifying chapter.")
                 break
@@ -120,17 +121,16 @@ class LightNovelApi(LightNovelEntity):
             # break
         return novel, chapters
 
-    def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter]):
+    def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter], folder: str):
         from util import LatexHtmlSink
-        FOLDER = 'out'
-        if os.path.isdir(FOLDER):
-            shutil.rmtree(FOLDER)
+        if os.path.isdir(folder):
+            shutil.rmtree(folder)
         novel_title = textutil.slugify(novel.title)
-        path = os.path.join(FOLDER, novel_title)
+        path = os.path.join(folder, novel_title)
         if os.path.isdir(path):
             shutil.rmtree(path)
-        os.mkdir(FOLDER)
-        os.mkdir(path)
+        os.makedirs(folder)
+        os.makedirs(path)
         index = 0
         chapter_filenames_noext = []
         converter = LatexHtmlSink()
@@ -142,7 +142,7 @@ class LightNovelApi(LightNovelEntity):
             chapter_filenames_noext.append(chapter_filename_noext)
             with open(chapter_path, 'w') as f:
                 f.write("\\chapter{{{}}}\n{}".format(chapter.title, converter.parse(chapter.content)))
-        with open(os.path.join(FOLDER, novel_title, novel_title + '.tex'), 'w') as f:
+        with open(os.path.join(folder, novel_title, novel_title + '.tex'), 'w') as f:
             f.write("""\\documentclass[oneside,11pt]{{memoir}}
 \\input{{structure.tex}}
 \\title{{{}}}
@@ -173,7 +173,7 @@ class LightNovelApi(LightNovelEntity):
             for chapter_title in chapter_filenames_noext:
                 f.write("\\include{{{}}}\n".format(chapter_title))
             f.write("\\end{document}")
-        shutil.copyfile('structure.tex', os.path.join(FOLDER, novel_title, 'structure.tex'))
+        shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
 
     @staticmethod
     def get_api(url: str, request_method=proxyutil.DirectProxy('').request):
