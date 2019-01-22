@@ -1,5 +1,5 @@
-from lightnovel.wuxiaworld import WuxiaWorldApi
-from util import slugify, HtmlProxy
+from lightnovel import LightNovelApi
+from util import HtmlProxy, HtmlCachingProxy
 import os
 import logging
 
@@ -8,29 +8,22 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.DEBUG
 )
+logging.getLogger("urllib3").setLevel(logging.ERROR)
 
+# Set it
+URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'
+CACHE = '.cache'
+OUT = 'out'
+DOWNLOAD = False
 
-FOLDER = os.path.join('test', 'data', slugify("heavenly-jewel-change"))
+# Make it
+proxy = HtmlCachingProxy(CACHE) if DOWNLOAD else HtmlProxy(CACHE)
+api = LightNovelApi.get_api(URL, proxy.request)
+if not proxy.load(os.path.join(CACHE, api.name, URL.split('/')[-1])):
+    raise Exception("Couldn't set up proxy")
 
-# api = WuxiaWorldApi()
-# novel, chapters = api.get_whole_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change', 1.0)
+# Rip,
+novel, chapters = api.get_whole_novel(URL, 1.0 if DOWNLOAD else 0.0)
 
-# if os.path.isdir(FOLDER):
-#     shutil.rmtree(FOLDER)
-# os.mkdir(FOLDER)
-
-# filename = novel.path.replace('/', '_') + '.html'
-# with open(os.path.join(FOLDER, filename), 'w') as f:
-#     f.write(novel.document.__str__())
-# for chapter in chapters:
-#     filename = chapter.path.replace('/', '_') + '.html'
-#     with open(os.path.join(FOLDER, filename), 'w') as f:
-#         f.write(chapter.document.__str__())
-
-proxy = HtmlProxy(FOLDER)
-proxy.load()
-api = WuxiaWorldApi(proxy.request)
-novel, chapters = api.get_whole_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change', 0.0)
-api.compile_to_latex_pdf(novel, chapters)
-
-# api.compile_to_latex_pdf(novel, chapters)
+# Export it
+api.compile_to_latex_pdf(novel, chapters, OUT)

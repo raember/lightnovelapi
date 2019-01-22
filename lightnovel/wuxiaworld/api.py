@@ -7,6 +7,7 @@ from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi
 
 class WuxiaWorld:
     host = 'https://www.wuxiaworld.com'
+    name = 'wuxiaworld'
 
 
 class WuxiaWorldChapterEntry(WuxiaWorld, ChapterEntry):

@@ -30,9 +30,9 @@ class Proxy:
         raise NotImplementedError('Must be overwritten')
 
     def request(self, method: str, url: str, **kwargs) -> requests.Response:
-        self.log.info("\033[36m{}\033[0m {}".format(method, url))
+        self.log.debug("\033[36m{}\033[0m {}".format(method, url))
         if kwargs:
-            self.log.info("{} {}".format(" " * len(method), kwargs))
+            self.log.debug("{}→{}".format(" " * len(method), kwargs))
         response: requests.Response = self._request(method, url, **kwargs)
         if response.status_code >= 500:
             color = 31  # Red
@@ -46,7 +46,7 @@ class Proxy:
             color = 39  # Default
         else:
             raise Exception("Couldn't interpret response code")
-        self.log.info("{} \033[{}m← {}\033[0m {}".format(
+        self.log.debug("{} \033[{}m← {}\033[0m {}".format(
             " " * len(method),
             color,
             response.status_code,
@@ -64,25 +64,6 @@ class DirectProxy(Proxy):
 
     def _request(self, method: str, url: str, **kwargs):
         return requests.request(method, url, **kwargs)
-
-
-class PersistToHtmlProxy(Proxy):
-    def _load(self, path: str) -> bool:
-        if not os.path.exists(path):
-            os.mkdir(path)
-        elif not os.path.isdir(path):
-            self.log.warning("Path {} is not a directory".format(path))
-            return False
-        return True
-
-    def _request(self, method: str, url: str, **kwargs):
-        response = requests.request(method, url, **kwargs)
-        if 'content-type' in response.headers and response.headers['content-type'].startswith('text/html'):
-            parsed = parse_url(url)
-            filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-            with open(filepath, 'w') as fp:
-                fp.write(response.content)
-        return response
 
 
 class ResponseMock:
@@ -103,6 +84,31 @@ class ResponseMock:
 
     def raise_for_status(self):
         pass
+
+
+class HtmlCachingProxy(Proxy):
+    def _load(self, path: str) -> bool:
+        if not os.path.exists(path):
+            os.makedirs(path)
+        elif not os.path.isdir(path):
+            self.log.warning("Path {} is not a directory".format(path))
+            return False
+        return True
+
+    def _request(self, method: str, url: str, **kwargs):
+        parsed = parse_url(url)
+        filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
+        if os.path.exists(filepath):
+            self.log.debug("Found response in cache")
+            with open(filepath, 'r') as fp:
+                doc = fp.read()
+            response = ResponseMock(url, doc)
+        else:
+            response = requests.request(method, url, **kwargs)
+            if 'content-type' in response.headers and response.headers['content-type'].startswith('text/html'):
+                with open(filepath, 'w') as fp:
+                    fp.write(response.content.decode('utf-8'))
+        return response
 
 
 class HarProxy(Proxy):
