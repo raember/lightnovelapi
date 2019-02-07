@@ -11,7 +11,7 @@ logging.basicConfig(
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 # Set it
-URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'
+URL = 'https://www.wuxiaworld.com/novel/child-of-light'
 CACHE = '.cache'
 OUT = 'out'
 DOWNLOAD = False
