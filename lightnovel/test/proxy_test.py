@@ -35,17 +35,17 @@ class HarProxyTest(unittest.TestCase):
 
 class HtmlProxyTest(unittest.TestCase):
     def test_load_har(self):
-        proxy = HtmlProxy('data/heavenly-jewel-change')
+        proxy = HtmlProxy('../.cache/wuxiaworld/heavenly-jewel-change')
         self.assertIsNotNone(proxy)
         self.assertTrue(proxy.load())
 
     def test_request(self):
-        proxy = HtmlProxy('data/heavenly-jewel-change')
+        proxy = HtmlProxy('../.cache/wuxiaworld/heavenly-jewel-change')
         proxy.load()
         self.assertIsNotNone(proxy.request("GET", "https://www.wuxiaworld.com/novel/heavenly-jewel-change"))
 
     def test_request_fail(self):
-        proxy = HtmlProxy('data/heavenly-jewel-change')
+        proxy = HtmlProxy('../.cache/wuxiaworld/heavenly-jewel-change')
         proxy.load()
         with self.assertRaises(LookupError):
             proxy.request("GET", "https://www.wuxiaworld.com/novel/heavenly-jewel-change/")

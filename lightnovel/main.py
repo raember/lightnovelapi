@@ -26,4 +26,6 @@ if not proxy.load(os.path.join(CACHE, api.name, URL.split('/')[-1])):
 novel, chapters = api.get_whole_novel(URL, 1.0 if DOWNLOAD else 0.0)
 
 # Export it
+if len(chapters) == 0:
+    exit(1)
 api.compile_to_latex_pdf(novel, chapters, OUT)
