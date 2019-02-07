@@ -154,8 +154,7 @@ class HtmlProxy(Proxy):
         filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
         # self.log.warning(parsed.path)
         # self.log.warning(textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-        self.log.warning(filepath)
-        print(os.listdir('..'))
+        # self.log.warning(filepath)
         if not os.path.isfile(filepath):
             raise LookupError("No entry found for {} {}".format(method, url))
         with open(filepath, 'r') as fp:

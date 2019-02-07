@@ -117,7 +117,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                 else:
                     self.log.warning("Non-Empty string: '{}'.".format(child))
             elif type(child) == Tag:
-                if child.name in ['p', 'div', 'a', 'blockquote']:
+                if child.name in ['p', 'div', 'a', 'blockquote', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4']:
                     if len(child.text.strip('\n ')) == 0:
                         # self.log.debug("Empty paragraph.")
                         pass
