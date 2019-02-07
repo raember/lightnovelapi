@@ -24,14 +24,14 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
 
     def _parse(self, document: BeautifulSoup) -> bool:
         head = document.select_one('head')
-        json_data = json.loads(head.select_one('script[type=application/ld+json]').text)
+        json_data = json.loads(head.select_one('script[type="application/ld+json"]').text)
         self.title = json_data['name']
         self.log.debug("Novel title is: {}".format(self.title))
         url = json_data['potentialAction']['target']['urlTemplate']
         self.first_chapter_path = parse_url(url).path
         self.translator = json_data['author']['name']
-        self.img_url = head.select_one('meta[property=og:image]').get('content')
-        url = head.select_one('meta[property=og:url]').get('content')
+        self.img_url = head.select_one('meta[property="og:image"]').get('content')
+        url = head.select_one('meta[property="og:url"]').get('content')
         self.path = parse_url(url).path
         p15 = document.select_one('div.p-15')
         self.tags = self.__extract_tags(p15)
@@ -75,17 +75,17 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
 
     def _parse(self, document: BeautifulSoup):
         head = document.select_one('head')
-        if head.select_one('meta[name=description]').get('content') is None:
+        if head.select_one('meta[name="description"]').get('content') is None:
             self.success = False
             return
         else:
             self.success = True
-        assert head.select_one('script[type=application/ld+json]') is not None
-        json_str = head.select_one('script[type=application/ld+json]').text
+        assert head.select_one('script[type="application/ld+json"]') is not None
+        json_str = head.select_one('script[type="application/ld+json"]').text
         json_data = json.loads(json_str)
         self.translator = json_data['author']['name']
         # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', ' ')
-        url = head.select_one('meta[property=og:url]').get('content')
+        url = head.select_one('meta[property="og:url"]').get('content')
         self.path = parse_url(url).path
         for script_tag in head.select('script'):
             script = script_tag.text.strip('\n \t;')
