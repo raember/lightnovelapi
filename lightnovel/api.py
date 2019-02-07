@@ -144,6 +144,8 @@ class LightNovelApi(LightNovelEntity):
                 f.write("\\chapter{{{}}}\n{}".format(chapter.title, converter.parse(chapter.content)))
         with open(os.path.join(folder, novel_title, novel_title + '.tex'), 'w') as f:
             f.write("""\\documentclass[oneside,11pt]{{memoir}}
+\\usepackage[normalem]{{ulem}}
+\\usepackage{{fontspec}}
 \\input{{structure.tex}}
 \\title{{{}}}
 \\author{{{}}}
