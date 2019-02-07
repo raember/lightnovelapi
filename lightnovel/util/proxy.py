@@ -139,18 +139,25 @@ class HarProxy(Proxy):
 class HtmlProxy(Proxy):
 
     def _load(self, path: str) -> bool:
+        # print(os.path.isdir('.'))
+        # print(os.path.curdir)
+        # print(os.path.isdir(os.path.curdir))
+        # print(os.listdir('.'))
+        # print(path)
+        # print(os.path.isdir(path))
         return os.path.isdir(path)
 
     def _request(self, method: str, url: str, **kwargs):
         if not method == "GET":
-            raise LookupError("No entry found")
+            raise LookupError("No entry found for {} {}".format(method, url))
         parsed = parse_url(url)
         filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
         # self.log.warning(parsed.path)
         # self.log.warning(textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-        # self.log.warning(filepath)
+        self.log.warning(filepath)
+        print(os.listdir('..'))
         if not os.path.isfile(filepath):
-            raise LookupError("No entry found")
+            raise LookupError("No entry found for {} {}".format(method, url))
         with open(filepath, 'r') as fp:
             text = fp.read()
         return ResponseMock(url, text)
