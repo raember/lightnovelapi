@@ -15,7 +15,7 @@ class HJCSinkTest(unittest.TestCase):
         cls.proxy.load()
 
     def test_parsing_hjc_description_as_string(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         novel.parse()
         descr = novel.description
@@ -36,7 +36,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          strdescr)
 
     def test_parsing_hjc_description_as_markdown(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         novel.parse()
         descr = novel.description
@@ -68,7 +68,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          strdescr)
 
     def test_parsing_hjc_description_as_latex(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         novel.parse()
         descr = novel.description

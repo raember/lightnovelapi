@@ -7,14 +7,13 @@ from util import HarProxy
 
 
 class WuxiaWorldApiHjcTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
         cls.proxy.load()
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
@@ -89,7 +88,7 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         self.assertEqual(697, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         chapter = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
@@ -136,7 +135,7 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
                          chapter.content.text)
 
     def test_parsing_chapter_2(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         chapter = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
@@ -190,7 +189,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
         cls.proxy.load()
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world')
         self.assertIsNotNone(novel)
         self.assertFalse(novel.success)
@@ -242,7 +241,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
         self.assertEqual(157, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         chapter = api.get_chapter('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
@@ -343,7 +342,7 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
         cls.proxy.load()
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/stop-friendly-fire')
         self.assertIsNotNone(novel)
         self.assertEqual(WuxiaWorldNovel, type(novel))
@@ -386,7 +385,7 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
         self.assertEqual(0, len(book.chapters))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy.request)
+        api = WuxiaWorldApi(self.proxy)
         chapter = api.get_chapter('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1')
         self.assertIsNotNone(chapter)
         self.assertEqual(WuxiaWorldChapter, type(chapter))
