@@ -79,12 +79,12 @@ class Novel(LightNovelPage):
 
 
 class LightNovelApi(LightNovelEntity):
-    def __init__(self, request_method=proxyutil.DirectProxy('').request):
+    def __init__(self, proxy: proxyutil.Proxy = proxyutil.DirectProxy):
         super().__init__()
-        self._request = request_method
+        self.proxy = proxy
 
     def _get_document(self, url: str) -> BeautifulSoup:
-        response = self._request('GET', url)
+        response = self.proxy.request('GET', url)
         response.raise_for_status()
         return BeautifulSoup(response.text, features="html5lib")
 
@@ -178,10 +178,10 @@ class LightNovelApi(LightNovelEntity):
         shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
 
     @staticmethod
-    def get_api(url: str, request_method=proxyutil.DirectProxy('').request):
+    def get_api(url: str, proxy: proxyutil.Proxy = proxyutil.DirectProxy('')):
         from wuxiaworld import WuxiaWorldApi
         apis = [
-            WuxiaWorldApi(request_method)
+            WuxiaWorldApi(proxy)
         ]
         parsed = parse_url(url)
         for api in apis:

@@ -6,7 +6,6 @@ for filename in os.listdir("data"):
     if not filename.endswith('.har'):
         print("Not a HAR archive file. Skipping.")
         continue
-    obj = {}
     with open(os.path.join('data', filename), 'r') as file:
         obj = json.load(file)
     if type(obj) == dict:

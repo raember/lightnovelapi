@@ -157,6 +157,6 @@ class HtmlProxy(Proxy):
         # self.log.warning(filepath)
         if not os.path.isfile(filepath):
             raise LookupError("No entry found for {} {}".format(method, url))
-        with open(filepath, 'r') as fp:
+        with open(filepath, 'r', encoding='utf-8') as fp:
             text = fp.read()
         return ResponseMock(url, text)
