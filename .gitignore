@@ -206,3 +206,6 @@ dmypy.json
 
 # Backup files
 *.bak
+
+# Cache
+.cache/

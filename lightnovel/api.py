@@ -178,7 +178,7 @@ class LightNovelApi(LightNovelEntity):
         shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
 
     @staticmethod
-    def get_api(url: str, proxy: proxyutil.Proxy = proxyutil.DirectProxy('')):
+    def get_api(url: str, proxy: proxyutil.Proxy = proxyutil.DirectProxy()):
         from wuxiaworld import WuxiaWorldApi
         apis = [
             WuxiaWorldApi(proxy)

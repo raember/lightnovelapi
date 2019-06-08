@@ -11,8 +11,7 @@ class HJCSinkTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
-        cls.proxy.load()
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2))
 
     def test_parsing_hjc_description_as_string(self):
         api = WuxiaWorldApi(self.proxy)

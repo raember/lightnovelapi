@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from abc import ABC
 from typing import List, Dict
 from urllib3.util.url import parse_url
 import lightnovel.util.text as textutil
@@ -8,25 +9,13 @@ import lightnovel.util.text as textutil
 import requests
 
 
-def ipinfo():
-    return requests.request('GET', 'https://ipinfo.io/json').json()
+class Proxy(ABC):
 
-
-class Proxy:
-    path = ''
-
-    def __init__(self, path):
+    def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
-        self.path = path
+        self._load()
 
-    def load(self, path: str = '') -> bool:
-        if path == '':
-            path = self.path
-        else:
-            self.path = path
-        return self._load(path)
-
-    def _load(self, path: str) -> bool:
+    def _load(self):
         raise NotImplementedError('Must be overwritten')
 
     def request(self, method: str, url: str, **kwargs) -> requests.Response:
@@ -59,25 +48,42 @@ class Proxy:
 
 
 class DirectProxy(Proxy):
-    def _load(self, path: str) -> bool:
-        return True
+    def _load(self):
+        pass
 
     def _request(self, method: str, url: str, **kwargs):
         return requests.request(method, url, **kwargs)
 
 
-class ResponseMock:
+class LocalProxy(Proxy, ABC):
+    path = ''
+
+    def __init__(self, path: str):
+        self.path = path
+        super().__init__()
+
+
+class ResponseMock(requests.Response):
     def __init__(self, url: str, text: str, headers=None, status_code=200, cookies=None):
+        super().__init__()
         if headers is None:
             headers = {'content-type': '-'}
         if cookies is None:
             cookies = []
         self.url = url
-        self.text = text
-        self.content = text.encode('utf-8')
+        self._text = text
+        self._content = text.encode('utf-8')
         self.headers = headers
         self.status_code = status_code
         self.cookies = cookies
+
+    @property
+    def text(self):
+        return self._text
+
+    @property
+    def content(self):
+        return self._content
 
     def json(self):
         return json.loads(self.content)
@@ -86,12 +92,12 @@ class ResponseMock:
         pass
 
 
-class HtmlCachingProxy(Proxy):
-    def _load(self, path: str) -> bool:
-        if not os.path.exists(path):
-            os.makedirs(path)
-        elif not os.path.isdir(path):
-            self.log.warning("Path {} is not a directory".format(path))
+class HtmlCachingProxy(LocalProxy):
+    def _load(self):
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+        elif not os.path.isdir(self.path):
+            self.log.warning("Path {} is not a directory".format(self.path))
             return False
         return True
 
@@ -99,7 +105,7 @@ class HtmlCachingProxy(Proxy):
         parsed = parse_url(url)
         filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
         if os.path.exists(filepath):
-            self.log.debug("Found response in cache")
+            self.log.debug("Cache hit")
             with open(filepath, 'r') as fp:
                 doc = fp.read()
             response = ResponseMock(url, doc)
@@ -108,13 +114,14 @@ class HtmlCachingProxy(Proxy):
             if 'content-type' in response.headers and response.headers['content-type'].startswith('text/html'):
                 with open(filepath, 'w') as fp:
                     fp.write(response.content.decode('utf-8'))
+                self.log.debug("Cached answer")
         return response
 
 
-class HarProxy(Proxy):
+class HarProxy(LocalProxy):
     har: List[Dict] = None
 
-    def _load(self, path: str) -> bool:
+    def _load(self):
         try:
             with open(self.path, 'r') as fp:
                 self.har = json.load(fp)
@@ -136,25 +143,15 @@ class HarProxy(Proxy):
         raise LookupError("No entry found")
 
 
-class HtmlProxy(Proxy):
-
-    def _load(self, path: str) -> bool:
-        # print(os.path.isdir('.'))
-        # print(os.path.curdir)
-        # print(os.path.isdir(os.path.curdir))
-        # print(os.listdir('.'))
-        # print(path)
-        # print(os.path.isdir(path))
-        return os.path.isdir(path)
+class HtmlProxy(LocalProxy):
+    def _load(self):
+        pass
 
     def _request(self, method: str, url: str, **kwargs):
         if not method == "GET":
             raise LookupError("No entry found for {} {}".format(method, url))
         parsed = parse_url(url)
         filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-        # self.log.warning(parsed.path)
-        # self.log.warning(textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-        # self.log.warning(filepath)
         if not os.path.isfile(filepath):
             raise LookupError("No entry found for {} {}".format(method, url))
         with open(filepath, 'r', encoding='utf-8') as fp:
