@@ -9,8 +9,7 @@ from util import HarProxy
 class WuxiaWorldApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2.value))
-        cls.proxy.load()
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2))
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy)
@@ -185,8 +184,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_WMW_COVER_C1.value))
-        cls.proxy.load()
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_WMW_COVER_C1))
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy)
@@ -338,8 +336,7 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_SFF_Cover_C1_78F.value))
-        cls.proxy.load()
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_SFF_Cover_C1_78F))
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy)
