@@ -23,7 +23,7 @@ api = LightNovelApi.get_api(URL, proxy)
 #     raise Exception("Couldn't set up proxy")
 
 # Rip,
-novel, chapters = api.get_whole_novel(URL, 1.0 if DOWNLOAD else 0.0)
+novel, chapters = api.get_entire_novel(URL, 1.0 if DOWNLOAD else 0.0)
 
 # Export it
 if len(chapters) == 0:
