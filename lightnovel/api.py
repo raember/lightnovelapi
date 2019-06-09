@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import time
+from abc import ABC
 from typing import List, Tuple
 
 from bs4 import Tag, BeautifulSoup
@@ -22,6 +23,7 @@ class LightNovelEntity:
 
 
 class LightNovelPage(LightNovelEntity):
+    title = ''
     path = ''
     document = None
     success = False
@@ -53,7 +55,6 @@ class LightNovelPage(LightNovelEntity):
 
 
 class Chapter(LightNovelPage):
-    title = ''
     translator = ''
     previous_chapter_path = ''
     next_chapter_path = ''
@@ -71,7 +72,6 @@ class Book:
 
 
 class Novel(LightNovelPage):
-    title = ''
     translator = ''
     description: Tag = None
     books: List[Book] = []
@@ -79,25 +79,56 @@ class Novel(LightNovelPage):
     img_url = ''
 
 
-class LightNovelApi(LightNovelEntity):
+class LightNovelApi(LightNovelEntity, ABC):
     proxy: proxyutil.Proxy = None
 
     def __init__(self, proxy: proxyutil.Proxy = proxyutil.DirectProxy):
+        """
+        Creates a new API for a specific service.
+        :param proxy: The proxy to use when executing http requests.
+        """
         super().__init__()
         self.proxy = proxy
 
     def _get_document(self, url: str) -> BeautifulSoup:
-        response = self.proxy.request('GET', url)
-        response.raise_for_status()
-        return BeautifulSoup(response.text, features="html5lib")
+        """
+        Downloads an html document from a given url.
+        :param url: The url where the document is located at.
+        :return: An instance of BeautifulSoup which represents the html document.
+        """
+        with self.proxy.request('GET', url) as response:  # Not actually needed, but something something Consistency
+            response.raise_for_status()
+            return BeautifulSoup(response.text, features="html5lib")
 
     def get_novel(self, url: str) -> Novel:
+        """
+        Downloads the main page of the novel from the given url.
+        :param url: The url where the page is located at.
+        :return: An instance of a Novel.
+        """
         return Novel(self._get_document(url))
 
     def get_chapter(self, url: str) -> Chapter:
+        """
+        Downloads a chapter from the given url.
+        :param url: The url where the chapter is located at.
+        :return: An instance of a Chapter.
+        """
         return Chapter(self._get_document(url))
 
-    def get_whole_novel(self, url: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
+    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
+        """
+        Downloads the main page of a novel and then all its chapters.
+        This method dow not only try to get the chapters from the chapter list
+        on the main page, but also follows the links to the next chapter if they
+        are available on the current chapter.
+
+        If the main page did not get parsed properly, the function returns the parsed novel
+        and an empty list.
+        :param url: The url where the main page of the novel is located at.
+        :param delay: The time duration in seconds for which to wait between downloads.
+        :return: A tuple with an instance of the Novel and a list of the downloaded chapters.
+        """
         novel = self.get_novel(url)
         if not novel.parse():
             self.log.warning("Couldn't parse novel page. No chapters will be extracted.")
@@ -111,8 +142,6 @@ class LightNovelApi(LightNovelEntity):
                     self.log.warning("Failed parsing chapter.")
                 time.sleep(delay)
                 chapters.append(chapter)
-            #     break
-            # break
         while chapter.success and chapter.next_chapter_path:
             self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
             chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
@@ -121,9 +150,9 @@ class LightNovelApi(LightNovelEntity):
                 break
             time.sleep(delay)
             chapters.append(chapter)
-            # break
         return novel, chapters
 
+    # TODO: Get rid of this atrocity and use a proper architecture to deal with this instead.
     def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter], folder: str):
         from util import LatexHtmlSink
         if os.path.isdir(folder):
@@ -178,7 +207,13 @@ class LightNovelApi(LightNovelEntity):
         shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
 
     @staticmethod
-    def get_api(url: str, proxy: proxyutil.Proxy = proxyutil.DirectProxy()):
+    def get_api(url: str, proxy: proxyutil.Proxy = proxyutil.DirectProxy()) -> 'LightNovelApi':
+        """
+        Probes all available api wrappers and returns the first one that matches with the url.
+        :param url: The url to be checked for.
+        :param proxy: The proxy to use for the LightNovelApi.
+        :return: An instance of a LightNovelApi.
+        """
         from wuxiaworld import WuxiaWorldApi
         apis = [
             WuxiaWorldApi(proxy)
