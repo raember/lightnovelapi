@@ -1,7 +1,9 @@
 import json
 from typing import List
+
 from bs4 import BeautifulSoup, Tag, NavigableString
 from urllib3.util.url import parse_url
+
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi
 
 
@@ -26,7 +28,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         head = document.select_one('head')
         json_data = json.loads(head.select_one('script[type="application/ld+json"]').text)
         self.title = json_data['name']
-        self.log.debug("Novel title is: {}".format(self.title))
+        self.log.debug(f"Novel title is: {self.title}")
         url = json_data['potentialAction']['target']['urlTemplate']
         self.first_chapter_path = parse_url(url).path
         self.translator = json_data['author']['name']
@@ -44,7 +46,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         for tag_html in p15.select('div.media.media-novel-index div.media-body div.tags a'):
             tag = tag_html.text.strip()
             tags.append(tag)
-        self.log.debug("Tags found: {}".format(tags))
+        self.log.debug(f"Tags found: {tags}")
         return tags
 
     def __extract_books(self, p15: Tag) -> List[WuxiaWorldBook]:
@@ -52,7 +54,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         for book_html in p15.select('div#accordion div.panel.panel-default'):
             book = WuxiaWorldBook()
             book.title = book_html.select_one('a.collapsed').text.strip()
-            self.log.debug("Book: {}".format(book.title))
+            self.log.debug(f"Book: {book.title}")
             book.chapters = self.__extract_chapters(book_html)
             books.append(book)
         return books
@@ -64,7 +66,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
             chapter.title = chapter_html.text.strip()
             chapter.path = chapter_html.get('href')
             chapters.append(chapter)
-        self.log.debug("Chapters found: {}".format(len(chapters)))
+        self.log.debug(f"Chapters found: {len(chapters)}")
         return chapters
 
 
@@ -109,13 +111,13 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
         max_tags_cnt = 4
         # self.log.info(content.contents)
         for child in content.children:
-            # self.log.debug('==== NEW CHILD ==== {}'.format(child))
+            # self.log.debug(f"==== NEW CHILD ==== {child}")
             if type(child) == NavigableString:
                 if len(child.strip('\n ')) == 0:
                     # self.log.debug("Empty string.")
                     pass
                 else:
-                    self.log.warning("Non-Empty string: '{}'.".format(child))
+                    self.log.warning(f"Non-Empty string: '{child}'.")
             elif type(child) == Tag:
                 if child.name in ['p', 'div', 'a', 'blockquote', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4']:
                     if len(child.text.strip('\n ')) == 0:
@@ -135,9 +137,9 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                     # self.log.debug('Rule reached.')
                     break
                 else:
-                    raise Exception("Unexpected tag name: {}".format(child))
+                    raise Exception(f"Unexpected tag name: {child}")
             else:
-                raise Exception("Unexpected type: {}".format(child))
+                raise Exception(f"Unexpected type: {child}")
         return new_content
 
 
