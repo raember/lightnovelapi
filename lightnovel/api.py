@@ -3,11 +3,12 @@ import os
 import shutil
 import time
 from typing import List, Tuple
+
 from bs4 import Tag, BeautifulSoup
 from urllib3.util import parse_url
 
-import lightnovel.util.text as textutil
 import lightnovel.util.proxy as proxyutil
+import lightnovel.util.text as textutil
 
 
 class LightNovelEntity:
@@ -79,6 +80,8 @@ class Novel(LightNovelPage):
 
 
 class LightNovelApi(LightNovelEntity):
+    proxy: proxyutil.Proxy = None
+
     def __init__(self, proxy: proxyutil.Proxy = proxyutil.DirectProxy):
         super().__init__()
         self.proxy = proxy
@@ -111,7 +114,7 @@ class LightNovelApi(LightNovelEntity):
             #     break
             # break
         while chapter.success and chapter.next_chapter_path:
-            self.log.debug("Following existing next chapter link({}).".format(chapter.next_chapter_path))
+            self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
             chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
             if not chapter.parse():
                 self.log.warning("Failed verifying chapter.")
@@ -137,18 +140,18 @@ class LightNovelApi(LightNovelEntity):
         for chapter in chapters:
             index += 1
             chapter_title = textutil.slugify(chapter.title)
-            chapter_filename_noext = "{}_{}".format(index, chapter_title)
+            chapter_filename_noext = f"{index}_{chapter_title}"
             chapter_path = os.path.join(path, chapter_filename_noext + '.tex')
             chapter_filenames_noext.append(chapter_filename_noext)
             with open(chapter_path, 'w') as f:
-                f.write("\\chapter{{{}}}\n{}".format(chapter.title, converter.parse(chapter.content)))
+                f.write(f"\\chapter{{{chapter.title}}}\n{converter.parse(chapter.content)}")
         with open(os.path.join(folder, novel_title, novel_title + '.tex'), 'w') as f:
-            f.write("""\\documentclass[oneside,11pt]{{memoir}}
+            f.write(f"""\\documentclass[oneside,11pt]{{memoir}}
 \\usepackage[normalem]{{ulem}}
 \\usepackage{{fontspec}}
 \\input{{structure.tex}}
-\\title{{{}}}
-\\author{{{}}}
+\\title{{{novel.title}}}
+\\author{{{novel.translator}}}
 \\newcommand{{\\edition}}{{}}
 \\makeatletter\\@addtoreset{{chapter}}{{part}}\makeatother%
 \\begin{{document}}
@@ -165,15 +168,12 @@ class LightNovelApi(LightNovelEntity):
 \\tableofcontents
 
 \\chapter*{{Synopsis}}
-{}
+{converter.parse(novel.description)}
 \\newpage
-""".format(
-                novel.title,
-                novel.translator,
-                converter.parse(novel.description)
-            ))
+"""
+                    )
             for chapter_title in chapter_filenames_noext:
-                f.write("\\include{{{}}}\n".format(chapter_title))
+                f.write(f"\\include{{{chapter_title}}}\n")
             f.write("\\end{document}")
         shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
 
@@ -188,4 +188,4 @@ class LightNovelApi(LightNovelEntity):
             label = parse_url(api.host)
             if parsed.host == label.host:
                 return api
-        raise LookupError("No api found for url {}.".format(url))
+        raise LookupError(f"No api found for url {url}.")

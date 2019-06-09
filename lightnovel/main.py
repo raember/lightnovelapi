@@ -1,7 +1,7 @@
+import logging
+
 from lightnovel import LightNovelApi
 from util import HtmlProxy, HtmlCachingProxy
-import os
-import logging
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(name)16s: %(message)s',
@@ -18,9 +18,9 @@ DOWNLOAD = False
 
 # Make it
 proxy = HtmlCachingProxy(CACHE) if DOWNLOAD else HtmlProxy(CACHE)
-api = LightNovelApi.get_api(URL, proxy.request)
-if not proxy.load(os.path.join(CACHE, api.name, URL.split('/')[-1])):
-    raise Exception("Couldn't set up proxy")
+api = LightNovelApi.get_api(URL, proxy)
+# if not proxy.load(os.path.join(CACHE, api.name, URL.split('/')[-1])):
+#     raise Exception("Couldn't set up proxy")
 
 # Rip,
 novel, chapters = api.get_whole_novel(URL, 1.0 if DOWNLOAD else 0.0)
