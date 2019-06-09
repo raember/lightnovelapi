@@ -2,7 +2,7 @@ import json
 import os
 
 for filename in os.listdir("data"):
-    print("Checking {}...".format(filename))
+    print(f"Checking {filename}...")
     if not filename.endswith('.har'):
         print("Not a HAR archive file. Skipping.")
         continue

@@ -3,10 +3,11 @@ import logging
 import os
 from abc import ABC
 from typing import List, Dict
-from urllib3.util.url import parse_url
-import lightnovel.util.text as textutil
 
 import requests
+from urllib3.util.url import parse_url
+
+import lightnovel.util.text as textutil
 
 
 class Proxy(ABC):
@@ -19,9 +20,10 @@ class Proxy(ABC):
         raise NotImplementedError('Must be overwritten')
 
     def request(self, method: str, url: str, **kwargs) -> requests.Response:
-        self.log.debug("\033[36m{}\033[0m {}".format(method, url))
+        self.log.debug(f"\033[36m{method}\033[0m {url}")
+        left_alignment = ' ' * len(method)
         if kwargs:
-            self.log.debug("{}→{}".format(" " * len(method), kwargs))
+            self.log.debug(f"{left_alignment}→{kwargs}")
         response: requests.Response = self._request(method, url, **kwargs)
         if response.status_code >= 500:
             color = 31  # Red
@@ -35,15 +37,11 @@ class Proxy(ABC):
             color = 39  # Default
         else:
             raise Exception("Couldn't interpret response code")
-        self.log.debug("{} \033[{}m← {}\033[0m {}".format(
-            " " * len(method),
-            color,
-            response.status_code,
-            response.headers['content-type'] if 'content-type' in response.headers else '-'
-        ))
+        content_type = response.headers['content-type'] if 'content-type' in response.headers else '-'
+        self.log.debug(f"{left_alignment} \033[{color}m← {response.status_code}\033[0m {content_type}")
         return response
 
-    def _request(self, method: str, url: str, **kwargs):
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         raise NotImplementedError('Must be overwritten')
 
 
@@ -51,7 +49,7 @@ class DirectProxy(Proxy):
     def _load(self):
         pass
 
-    def _request(self, method: str, url: str, **kwargs):
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         return requests.request(method, url, **kwargs)
 
 
@@ -97,11 +95,11 @@ class HtmlCachingProxy(LocalProxy):
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         elif not os.path.isdir(self.path):
-            self.log.warning("Path {} is not a directory".format(self.path))
+            self.log.warning(f"Path {self.path} is not a directory")
             return False
         return True
 
-    def _request(self, method: str, url: str, **kwargs):
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         parsed = parse_url(url)
         filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
         if os.path.exists(filepath):
@@ -130,7 +128,7 @@ class HarProxy(LocalProxy):
             return False
         return True
 
-    def _request(self, method: str, url: str, **kwargs):
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         for entry in self.har:
             if entry['request']['method'] == method and entry['request']['url'] == url:
                 return ResponseMock(
@@ -147,13 +145,13 @@ class HtmlProxy(LocalProxy):
     def _load(self):
         pass
 
-    def _request(self, method: str, url: str, **kwargs):
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         if not method == "GET":
-            raise LookupError("No entry found for {} {}".format(method, url))
+            raise LookupError(f"No entry found for {method} {url}: {method} method not supported")
         parsed = parse_url(url)
         filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
         if not os.path.isfile(filepath):
-            raise LookupError("No entry found for {} {}".format(method, url))
+            raise LookupError(f"No entry found for {method} {url}")
         with open(filepath, 'r', encoding='utf-8') as fp:
             text = fp.read()
         return ResponseMock(url, text)

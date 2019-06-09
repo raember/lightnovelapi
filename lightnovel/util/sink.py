@@ -1,9 +1,11 @@
 import re
-from bs4 import Tag, NavigableString
+from abc import ABC
 from typing import List
 
+from bs4 import Tag, NavigableString
 
-class HtmlSink:
+
+class HtmlSink(ABC):
 
     def parse(self, html: Tag) -> str:
         strings = []
@@ -13,7 +15,7 @@ class HtmlSink:
             elif type(child) == Tag:
                 strings.append(self._parse_child_tag(child))
             else:
-                raise Exception("Unknown object type: {}".format(type(child)))
+                raise Exception(f"Unknown object type: {type(child)}")
         return self._join_strings(strings)
 
     def _join_strings(self, strings: List[str]) -> str:
@@ -32,7 +34,7 @@ class HtmlSink:
         elif tag.name == 'ul':
             return self._parse_unordered_list(tag)
         else:
-            raise Exception("Unknown child tag name: {}".format(tag.name))
+            raise Exception(f"Unknown child tag name: {tag.name}")
 
     def _parse_navigable_string(self, string: NavigableString) -> str:
         return string.__str__()
@@ -63,9 +65,9 @@ class HtmlSink:
                 elif subtag.name in ['br', 'img']:
                     pass
                 else:
-                    raise Exception("Unknown tag type: {}({})".format(subtag.name, subtag))
+                    raise Exception(f"Unknown tag type: {subtag.name}({subtag})")
             else:
-                raise Exception("Unknown object type: {}".format(type(subtag)))
+                raise Exception(f"Unknown object type: {type(subtag)}")
         return string
 
     def _parse_horizontal_rule(self, tag: Tag) -> str:
@@ -109,7 +111,7 @@ class HtmlSink:
         return self._parse_sub_tags(tag)
 
 
-class StringHtmlSink(HtmlSink):
+class StringHtmlSink(HtmlSink, ABC):
 
     def _parse_child_tag(self, tag: Tag) -> str:
         return tag.text.strip()
@@ -124,22 +126,22 @@ class MarkdownHtmlSink(HtmlSink):
         return '---'
 
     def _parse_italics(self, tag: Tag) -> str:
-        return "_{}_".format(self._parse_sub_tags(tag))
+        return f"_{self._parse_sub_tags(tag)}_"
 
     def _parse_strong(self, tag: Tag) -> str:
-        return "**{}**".format(self._parse_sub_tags(tag))
+        return f"**{self._parse_sub_tags(tag)}**"
 
     def _parse_underline(self, tag: Tag) -> str:
-        return "__{}__".format(self._parse_sub_tags(tag))
+        return f"__{self._parse_sub_tags(tag)}__"
 
     def _parse_ordered_list_item(self, tag: Tag, index: int) -> str:
-        return "{}. {}".format(index, self._parse_sub_tags(tag))
+        return f"{index}. {self._parse_sub_tags(tag)}"
 
     def _parse_unordered_list_item(self, tag: Tag) -> str:
-        return "- {}".format(self._parse_sub_tags(tag))
+        return f"- {self._parse_sub_tags(tag)}"
 
     def _parse_del(self, tag: Tag) -> str:
-        return "~~{}~~".format(self._parse_sub_tags(tag))
+        return f"~~{self._parse_sub_tags(tag)}~~"
 
 
 class LatexHtmlSink(HtmlSink):
@@ -159,23 +161,23 @@ class LatexHtmlSink(HtmlSink):
         return string
 
     def _parse_paragraph(self, tag: Tag) -> str:
-        return "{}\\\\ \\relax".format(self._parse_sub_tags(tag))
+        return f"{self._parse_sub_tags(tag)}\\\\ \\relax"
 
     def _parse_horizontal_rule(self, tag: Tag) -> str:
         return '\\hrule'
 
     def _parse_italics(self, tag: Tag) -> str:
-        return "\\textit{{{}}}".format(self._parse_sub_tags(tag))
+        return f"\\textit{{{self._parse_sub_tags(tag)}}}"
 
     def _parse_strong(self, tag: Tag) -> str:
-        return "\\textbf{{{}}}".format(self._parse_sub_tags(tag))
+        return f"\\textbf{{{self._parse_sub_tags(tag)}}}"
 
     def _parse_underline(self, tag: Tag) -> str:
-        return "\\underline{{{}}}".format(self._parse_sub_tags(tag))
+        return f"\\underline{{{self._parse_sub_tags(tag)}}}"
 
     def _parse_del(self, tag: Tag) -> str:
         # \usepackage[normalem]{ulem}
-        return "\\sout{{{}}}".format(self._parse_sub_tags(tag))
+        return f"\\sout{{{self._parse_sub_tags(tag)}}}"
 
     def _parse_ordered_list(self, tag: Tag) -> str:
         strings = ['\\begin{enumerate}']
@@ -196,7 +198,7 @@ class LatexHtmlSink(HtmlSink):
         return self._join_strings(strings)
 
     def _parse_ordered_list_item(self, tag: Tag, index: int) -> str:
-        return "\\item {}".format(self._parse_sub_tags(tag))
+        return f"\\item {self._parse_sub_tags(tag)}"
 
     def _parse_unordered_list_item(self, tag: Tag) -> str:
-        return "\\item {}".format(self._parse_sub_tags(tag))
+        return f"\\item {self._parse_sub_tags(tag)}"
