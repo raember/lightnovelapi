@@ -1,1 +1,2 @@
-from .api import WuxiaWorldApi, WuxiaWorld, WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldBook, WuxiaWorldChapterEntry
+from .api import WuxiaWorldApi, WuxiaWorld, WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldBook, \
+    WuxiaWorldChapterEntry, WuxiaWorldSearchEntry

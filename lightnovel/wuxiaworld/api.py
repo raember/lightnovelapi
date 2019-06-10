@@ -1,10 +1,12 @@
 import json
+from datetime import datetime
 from typing import List
 
 from bs4 import BeautifulSoup, Tag, NavigableString
 from urllib3.util.url import parse_url
 
-from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi
+from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, SearchEntry
+from lightnovel.util import slugify
 
 
 class WuxiaWorld:
@@ -18,6 +20,35 @@ class WuxiaWorldChapterEntry(WuxiaWorld, ChapterEntry):
 
 class WuxiaWorldBook(WuxiaWorld, Book):
     chapters: List[WuxiaWorldChapterEntry] = []
+
+
+class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
+    id: int
+    name: str
+    slug: str
+    cover_url: str
+    abbreviation: str
+    synopsis: str
+    language: str
+    time_created: datetime
+    status: int
+    chapter_count: int
+    tags: List[str]
+
+    def __init__(self, json_data: dict):
+        self.id = int(json_data['id'])
+        self.name = json_data['name']
+        self.slug = json_data['slug']
+        self.cover_url = json_data['coverUrl']
+        self.abbreviation = json_data['abbrevation']
+        self.synopsis = json_data['synopsis']
+        self.language = json_data['language']
+        self.time_created = datetime.utcfromtimestamp(float(json_data['timeCreated']))
+        self.status = int(json_data['status'])
+        self.chapter_count = int(json_data['chapterCount'])
+        self.tags = list(json_data['tags'])
+        self.title = self.name
+        self.path = f"novel/{self.slug}"
 
 
 class WuxiaWorldNovel(WuxiaWorld, Novel):
@@ -150,3 +181,18 @@ class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
 
     def get_chapter(self, url: str) -> WuxiaWorldChapter:
         return WuxiaWorldChapter(self._get_document(url))
+
+    def search(self, title_or_abbr: str, count: int = 5) -> List[WuxiaWorldSearchEntry]:
+        """
+        Searches for a novel by title or abbreviation.
+        :param title_or_abbr: The title to search for.
+        :param count: The maximum amount of results.
+        :return: A list of SearchEntry.
+        """
+        data = self._get(
+            f"https://www.wuxiaworld.com/api/novels/search?query={slugify(title_or_abbr)}&count={count}").json()
+        assert data['result']
+        entries = []
+        for item in data['items']:
+            entries.append(WuxiaWorldSearchEntry(item))
+        return entries
