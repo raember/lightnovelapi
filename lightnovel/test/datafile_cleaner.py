@@ -1,12 +1,14 @@
 import json
 import os
 
+from lightnovel.util.proxy import CachingProxy
+
 for filename in os.listdir("data"):
     print(f"Checking {filename}...")
     if not filename.endswith('.har'):
         print("Not a HAR archive file. Skipping.")
         continue
-    with open(os.path.join('data', filename), 'r') as file:
+    with open(os.path.join('data', filename), 'r', encoding='utf-8') as file:
         obj = json.load(file)
     if type(obj) == dict:
         print("Classified as unprocessed file. Cleaning...")
@@ -18,11 +20,12 @@ for filename in os.listdir("data"):
             respcontent = response['content']
             if 'mimeType' in respcontent:
                 mimetype: str = respcontent['mimeType']
-                if mimetype.startswith('image') and not request['url'] in images:
-                    images.append(request['url'])
-                elif mimetype.startswith('text/html'):
-                    pass
-                else:
+                match = False
+                for ext in CachingProxy.EXTENSIONS:
+                    if ext[1:] in mimetype:
+                        match = True
+                        break
+                if not match:
                     continue
             else:
                 continue
