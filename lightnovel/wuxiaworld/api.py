@@ -36,11 +36,12 @@ class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
     tags: List[str]
 
     def __init__(self, json_data: dict):
+        super().__init__()
         self.id = int(json_data['id'])
         self.name = json_data['name']
         self.slug = json_data['slug']
         self.cover_url = json_data['coverUrl']
-        self.abbreviation = json_data['abbrevation']
+        self.abbreviation = json_data['abbreviation']
         self.synopsis = json_data['synopsis']
         self.language = json_data['language']
         self.time_created = datetime.utcfromtimestamp(float(json_data['timeCreated']))
@@ -175,7 +176,6 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
 
 
 class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
-    # Search: /api/novels/search?query=the&count=5
     def get_novel(self, url: str) -> WuxiaWorldNovel:
         return WuxiaWorldNovel(self._get_document(url))
 
@@ -189,8 +189,12 @@ class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
         :param count: The maximum amount of results.
         :return: A list of SearchEntry.
         """
+        title_or_abbr = slugify(title_or_abbr, lowercase=False)
         data = self._get(
-            f"https://www.wuxiaworld.com/api/novels/search?query={slugify(title_or_abbr)}&count={count}").json()
+            f"https://www.wuxiaworld.com/api/novels/search?query={title_or_abbr}&count={count}",
+            cache=False,
+            headers={'Accept': 'application/json'}
+        ).json()
         assert data['result']
         entries = []
         for item in data['items']:
