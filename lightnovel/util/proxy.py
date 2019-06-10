@@ -5,9 +5,7 @@ from abc import ABC
 from typing import List, Dict
 
 import requests
-from urllib3.util.url import parse_url
-
-import lightnovel.util.text as textutil
+from urllib3.util.url import parse_url, Url
 
 
 class Proxy(ABC):
@@ -91,14 +89,6 @@ class DirectProxy(Proxy):
         return requests.request(method, url, **kwargs)
 
 
-class LocalProxy(Proxy, ABC):
-    path = ''
-
-    def __init__(self, path: str):
-        self.path = path
-        super().__init__()
-
-
 class ResponseMock(requests.Response):
     def __init__(self, url: str, text: str, headers=None, status_code=200, cookies=None):
         super().__init__()
@@ -128,33 +118,82 @@ class ResponseMock(requests.Response):
         pass
 
 
-class HtmlCachingProxy(LocalProxy):
+class CachingProxy(Proxy):
+    path = ''
+    hit = False
+    EXTENSIONS = ['.html', '.jpg', '.jpeg', '.png', '.css', '.js']
+
+    # https://www.wuxiaworld.com/js/modernizr.js?v=QqwOvVrpWvoR-sQKfhc2L-PFhSBhC-AECmi5PesXQAA
+    # https://cdn.wuxiaworld.com/images/covers/wmw.jpg?ver=2839cf223fce0da2ff6da6ae32ab0c4e705eee1a
+    # https://www.wuxiaworld.com/novel/warlock-of-the-magus-world
+
+    def __init__(self, path: str):
+        self.path = path
+        super().__init__()
+
     def _load(self):
         if not os.path.exists(self.path):
-            os.makedirs(self.path)
+            os.makedirs(self.path)  # Don't use exists_ok=True; Might have '..' in path
         elif not os.path.isdir(self.path):
             self.log.warning(f"Path {self.path} is not a directory")
             return False
         return True
 
     def _request(self, method: str, url: str, **kwargs) -> requests.Response:
-        parsed = parse_url(url)
-        filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-        if os.path.exists(filepath):
-            self.log.debug("Cache hit")
-            with open(filepath, 'r') as fp:
-                doc = fp.read()
-            response = ResponseMock(url, doc)
+        url_parsed = parse_url(url)
+        filepath = self._get_filename(url_parsed, **kwargs)
+        self.log.debug(f"Looking for cached request at '{filepath}'")
+        if not os.path.exists(filepath):
+            self.log.debug("Cache miss")
+            return self._miss(filepath, method, url_parsed, **kwargs)
         else:
-            response = requests.request(method, url, **kwargs)
-            if 'content-type' in response.headers and response.headers['content-type'].startswith('text/html'):
-                with open(filepath, 'w') as fp:
-                    fp.write(response.content.decode('utf-8'))
-                self.log.debug("Cached answer")
+            self.log.debug(f"Cache hit ({filepath})")
+            return self._hit(filepath, url_parsed)
+
+    def _get_filename(self, url: Url, **kwargs):
+        path = os.path.splitext(url.path)[0] + self._extract_extension(url, **kwargs)
+        return os.path.normpath(os.path.join(self.path, url.host + path))
+
+    def _extract_extension(self, url: Url, **kwargs) -> str:
+        if url.query is not None:
+            self.log.warning(f"Url has query ({url.query}), which gets ignored when looking in cache.")
+        url_ext = os.path.splitext(url.path)[-1]
+        if url_ext == '':
+            self.log.debug(f"No extension found in url path ({url.path}).")
+            if 'headers' in kwargs and 'Accept' in kwargs['headers']:
+                accept = kwargs['headers']['Accept']
+                for ext in self.EXTENSIONS:
+                    if ext[1:] in accept:
+                        self.log.debug(f"Found extension '{ext[1:]}' in Accept header ({accept}).")
+                        return ext
+            else:
+                self.log.debug("No accept headers present")
+            url_ext = '.html'
+            self.log.warning(f"No extension found using the Accept header. Assuming {url_ext[1:]}.")
+            return url_ext
+        if url_ext in self.EXTENSIONS:
+            return url_ext
+        self.log.error(f"None of the supported extensions matched '{url_ext}'.")
+        return url_ext
+
+    def _miss(self, filepath: str, method: str, url: Url, **kwargs) -> requests.Response:
+        self.hit = False
+        response = requests.request(method, url, **kwargs)
+        directories = os.path.split(filepath)[0]
+        if not os.path.exists(directories):
+            os.makedirs(directories)  # Don't use exists_ok=True; Might have '..' in path
+        with open(filepath, 'wb') as fp:
+            fp.write(response.content)
+        self.log.debug(f"Cached answer in '{filepath}'")
         return response
 
+    def _hit(self, filepath: str, url: Url) -> requests.Response:
+        self.hit = True
+        with open(filepath, 'rb') as f:
+            return ResponseMock(url, f.read().decode('utf-8'))
 
-class HarProxy(LocalProxy):
+
+class HarProxy(CachingProxy):
     har: List[Dict] = None
 
     def _load(self):
@@ -169,27 +208,17 @@ class HarProxy(LocalProxy):
     def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         for entry in self.har:
             if entry['request']['method'] == method and entry['request']['url'] == url:
-                return ResponseMock(
-                    url,
-                    entry['response']['content']['text'],
-                    entry['response']['headers'],
-                    entry['response']['status'],
-                    entry['response']['cookies']
-                )
+                return self._hit(entry, url)
+        return self._miss()
+
+    def _miss(self, **kwargs) -> requests.Response:
         raise LookupError("No entry found")
 
-
-class HtmlProxy(LocalProxy):
-    def _load(self):
-        pass
-
-    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
-        if not method == "GET":
-            raise LookupError(f"No entry found for {method} {url}: {method} method not supported")
-        parsed = parse_url(url)
-        filepath = os.path.join(self.path, textutil.slugify(parsed.path.replace('/', '_')) + ".html")
-        if not os.path.isfile(filepath):
-            raise LookupError(f"No entry found for {method} {url}")
-        with open(filepath, 'r', encoding='utf-8') as fp:
-            text = fp.read()
-        return ResponseMock(url, text)
+    def _hit(self, entry: dict, url: str) -> requests.Response:
+        return ResponseMock(
+            url,
+            entry['response']['content']['text'],
+            entry['response']['headers'],
+            entry['response']['status'],
+            entry['response']['cookies']
+        )

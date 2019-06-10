@@ -3,8 +3,11 @@ import os
 import shutil
 import time
 from abc import ABC
-from typing import List, Tuple
+from io import BytesIO
+from typing import List, Tuple, Any
 
+import requests
+from PIL import Image
 from bs4 import Tag, BeautifulSoup
 from urllib3.util import parse_url
 
@@ -53,6 +56,9 @@ class LightNovelPage(LightNovelEntity):
         else:
             return self.host + self.path
 
+    def __str__(self):
+        return self.title
+
 
 class Chapter(LightNovelPage):
     translator = ''
@@ -65,10 +71,16 @@ class ChapterEntry:
     title = ''
     path = ''
 
+    def __str__(self):
+        return self.title
+
 
 class Book:
     title = ''
     chapters: List[ChapterEntry] = []
+
+    def __str__(self):
+        return self.title
 
 
 class Novel(LightNovelPage):
@@ -77,6 +89,15 @@ class Novel(LightNovelPage):
     books: List[Book] = []
     first_chapter_path = ''
     img_url = ''
+    image: Image.Image = None
+
+
+class SearchEntry:
+    title = ''
+    path = ''
+
+    def __str__(self):
+        return self.title
 
 
 class LightNovelApi(LightNovelEntity, ABC):
@@ -90,15 +111,28 @@ class LightNovelApi(LightNovelEntity, ABC):
         super().__init__()
         self.proxy = proxy
 
-    def _get_document(self, url: str) -> BeautifulSoup:
+    def _get(self, url: str, **kwargs: Any) -> requests.Response:
+        """
+        Downloads data from a given url.
+        :param url: The url where the document is located at.
+        :param kwargs: Additional args to convey to the requests library.
+        :return: The Response.
+        """
+        return self.proxy.request('GET', url, **kwargs)
+
+    def _get_document(self, url: str, **kwargs: Any) -> BeautifulSoup:
         """
         Downloads an html document from a given url.
         :param url: The url where the document is located at.
+        :param kwargs: Additional args to convey to the requests library.
         :return: An instance of BeautifulSoup which represents the html document.
         """
-        with self.proxy.request('GET', url) as response:  # Not actually needed, but something something Consistency
-            response.raise_for_status()
-            return BeautifulSoup(response.text, features="html5lib")
+        if 'headers' not in kwargs:
+            kwargs['headers'] = {'Accept': 'text/html'}
+        if 'Accept' not in kwargs['headers']:
+            kwargs['headers']['Accept'] = 'text/html'
+        response = self._get(url, **kwargs)
+        return BeautifulSoup(response.text, features="html5lib")
 
     def get_novel(self, url: str) -> Novel:
         """
@@ -108,6 +142,9 @@ class LightNovelApi(LightNovelEntity, ABC):
         """
         return Novel(self._get_document(url))
 
+    def get_image(self, url: str) -> Image.Image:
+        return Image.open(BytesIO(self._get(url).content))
+
     def get_chapter(self, url: str) -> Chapter:
         """
         Downloads a chapter from the given url.
@@ -116,9 +153,9 @@ class LightNovelApi(LightNovelEntity, ABC):
         """
         return Chapter(self._get_document(url))
 
-    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, List[Chapter]]:
+    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, Image.Image, List[Chapter]]:
         """
-        Downloads the main page of a novel and then all its chapters.
+        Downloads the main page of a novel (including its image) and then all its chapters.
         This method dow not only try to get the chapters from the chapter list
         on the main page, but also follows the links to the next chapter if they
         are available on the current chapter.
@@ -127,12 +164,14 @@ class LightNovelApi(LightNovelEntity, ABC):
         and an empty list.
         :param url: The url where the main page of the novel is located at.
         :param delay: The time duration in seconds for which to wait between downloads.
-        :return: A tuple with an instance of the Novel and a list of the downloaded chapters.
+        :return: A tuple with an instance of the Novel, an image and a list of the downloaded chapters.
         """
         novel = self.get_novel(url)
+        image: Image.Image = Image.Image()
         if not novel.parse():
             self.log.warning("Couldn't parse novel page. No chapters will be extracted.")
-            return novel, []
+            return novel, image, []
+        image = self.get_image(novel.img_url)
         chapters = []
         chapter = None
         for book in novel.books:
@@ -140,6 +179,14 @@ class LightNovelApi(LightNovelEntity, ABC):
                 chapter = self.get_chapter(self.get_url(chapter_entry.path))
                 if not chapter.parse():
                     self.log.warning("Failed parsing chapter.")
+                else:
+                    self.log.info(f"Got chapter '{chapter.title}'")
+                if isinstance(self.proxy, proxyutil.CachingProxy):
+                    proxy: proxyutil.CachingProxy = self.proxy
+                    if proxy.hit:
+                        delay = 0.0
+                    else:
+                        delay = 1.0
                 time.sleep(delay)
                 chapters.append(chapter)
         while chapter.success and chapter.next_chapter_path:
@@ -148,9 +195,19 @@ class LightNovelApi(LightNovelEntity, ABC):
             if not chapter.parse():
                 self.log.warning("Failed verifying chapter.")
                 break
+            else:
+                self.log.info(f"Got chapter '{chapter.title}'")
             time.sleep(delay)
             chapters.append(chapter)
-        return novel, chapters
+        return novel, image, chapters
+
+    def search(self, title: str) -> List[SearchEntry]:
+        """
+        Searches for a novel by title.
+        :param title: The title to search for.
+        :return: A list of SearchEntry.
+        """
+        raise NotImplementedError
 
     # TODO: Get rid of this atrocity and use a proper architecture to deal with this instead.
     def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter], folder: str):
