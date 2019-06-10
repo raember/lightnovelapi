@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import datetime
 
 from lightnovel.test.test_config import Hars
 from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
@@ -491,6 +492,83 @@ class WuxiaWorldApiSearchTest(unittest.TestCase):
     def setUpClass(cls):
         cls.proxy = HarProxy(os.path.join(*Hars.WW_SEARCH))
 
-    def test_search(self):
-        # TODO: The path for those search requests are always the same. Include caching capability in every proxy.
-        pass
+    def test_search_title(self):
+        api = WuxiaWorldApi(self.proxy)
+        results = api.search('Warlock')
+        self.assertEqual(1, len(results))
+        result = results[0]
+        self.assertEqual(18, result.id)
+        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', result.get_url())
+        self.assertEqual('Warlock of the Magus World', result.title)
+        self.assertEqual('novel/warlock-of-the-magus-world', result.path)
+        self.assertEqual('Warlock of the Magus World', result.name)
+        self.assertEqual('warlock-of-the-magus-world', result.slug)
+        self.assertEqual(
+            'https://cdn.wuxiaworld.com/images/covers/wmw.jpg?ver=2839cf223fce0da2ff6da6ae32ab0c4e705eee1a',
+            result.cover_url)
+        self.assertEqual('WMW', result.abbreviation)
+        self.assertEqual('<p>What happens when a scientist from a futuristic world reincarnates in a World of Magic '
+                         'and Knights?</p><p>An awesome MC &mdash; that&rsquo;s what happens!</p><p>A '
+                         'scientist&rsquo;s goal is to explore the secrets of the universe, and this is exactly what '
+                         'Leylin sets out to do when he is reincarnated. Dark, cold and calculating, he makes use of '
+                         'all his resources as he sets off on his adventures to meet his goal.</p><p><em>Face? Who '
+                         'needs that&hellip; Hmmm&hellip; that guy seems too powerful for me to take on now&hellip; I '
+                         'better keep a low profile for now.</em></p><p><em>You want me to help you? Sure&hellip; but '
+                         'what benefit can I get out of it? Nothing? Bye.</em></p><p><em>Hmmm&hellip; that guy looks '
+                         'like he might cause me problems in the future. Should I let him off for now and let him '
+                         'grow into someone that can threaten me&hellip;.. Nahhh. *kill*</em></p>', result.synopsis)
+        self.assertEqual('Chinese', result.language)
+        self.assertEqual(datetime.utcfromtimestamp(1470441600.0), result.time_created)
+        self.assertEqual(2, result.status)
+        self.assertEqual(1201, result.chapter_count)
+        self.assertListEqual(["Completed", "Chinese"], result.tags)
+
+    def test_search_abbreviation(self):
+        api = WuxiaWorldApi(self.proxy)
+        results = api.search('WMW')
+        self.assertEqual(1, len(results))
+        result = results[0]
+        self.assertEqual(18, result.id)
+
+    def test_search_title_middle(self):
+        api = WuxiaWorldApi(self.proxy)
+        results = api.search('Jewel')
+        self.assertEqual(1, len(results))
+        result = results[0]
+        self.assertEqual(30, result.id)
+        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', result.get_url())
+        self.assertEqual('Heavenly Jewel Change', result.title)
+        self.assertEqual('novel/heavenly-jewel-change', result.path)
+        self.assertEqual('Heavenly Jewel Change', result.name)
+        self.assertEqual('heavenly-jewel-change', result.slug)
+        self.assertEqual(
+            'https://cdn.wuxiaworld.com/images/covers/hjc.jpg?ver=f83790a5f2ff64bb6524c2cfd207845ba1d25ac6',
+            result.cover_url)
+        self.assertEqual('HJC', result.abbreviation)
+        self.assertEqual('<p><em>[Zen&rsquo;s Synopsis]</em></p><p>In a world where power means everything, '
+                         'and the strong trample the weak; there was a boy born from a Heavenly Jewel Master. Born in '
+                         'a small country which had to struggle to survive, the boy was expected to do great things. '
+                         'Alas he turned out to have blocked meridians and was unable to cultivate, ending up the '
+                         'trash of society. His father&rsquo;s tarnished pride&hellip; his fiance&eacute;&rsquo;s '
+                         'ultimate dishonour&hellip;</p><p>Being almost accidentally killed and left for the dead, '
+                         'heaven finally smiles upon him as a miracle descends, awakening his potential as a Heavenly '
+                         'Jewel Master. Or&hellip; is it truly a gift?</p><p>Join our dear rascally and shameless MC '
+                         'Zhou Weiqing in his exploits to reach the peak of the cultivation world, form an army, '
+                         'protect those he loves, and improve his country!</p><p>An all new world, an all new power '
+                         'system, unique weaponry &amp; MC! Come join me in laughing and crying together with this '
+                         'new masterpiece from Tang Jia San Shao!</p><hr><p><em>[Translated '
+                         'Synopsis]</em></p><p>Every human has their Personal Jewel of power, when awakened it can '
+                         'either be an Elemental Jewel or Physical Jewel. They circle the right and left wrists like '
+                         'bracelets of power.</p><p>Heavenly Jewels are like the twins born, meaning when both '
+                         'Elemental and Physical Jewels are Awakened for the same person, the pair is known as '
+                         'Heavenly Jewels.</p><p>Those who have the Physical Jewels are known as Physical Jewel '
+                         'Masters, those with Elemental Jewels are Elemental Jewel Masters, and those who train with '
+                         'Heavenly Jewels are naturally called Heavenly Jewel Masters.</p><p>Heavenly Jewel Masters '
+                         'have a highest level of 12 pairs of jewels, as such their training progress is known as '
+                         'Heavenly Jewels 12 Changes.</p><p>Our MC here is an archer who has such a pair of Heavenly '
+                         'Jewels.</p>', result.synopsis)
+        self.assertEqual('Chinese', result.language)
+        self.assertEqual(datetime.utcfromtimestamp(1438473600.0), result.time_created)
+        self.assertEqual(2, result.status)
+        self.assertEqual(903, result.chapter_count)
+        self.assertListEqual(["Completed", "Chinese"], result.tags)

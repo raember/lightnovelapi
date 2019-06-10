@@ -5,7 +5,7 @@ from unittest.mock import patch
 from urllib3.util import Url
 
 from test.test_config import CACHEFOLDER, Hars
-from util import HarProxy, CachingProxy, DirectProxy
+from util import Proxy, DirectProxy, HarProxy
 from util.proxy import ResponseMock
 
 
@@ -29,16 +29,16 @@ class DirectProxyTest(unittest.TestCase):
 
 class CachingProxyTest(unittest.TestCase):
     def test_instantiation(self):
-        proxy = CachingProxy(CACHEFOLDER)
+        proxy = Proxy(CACHEFOLDER)
         self.assertIsNotNone(proxy)
 
     def test_request_hit(self):
-        proxy = CachingProxy(CACHEFOLDER)
+        proxy = Proxy(CACHEFOLDER)
         self.assertIsNotNone(proxy.request("GET", "https://www.wuxiaworld.com/novel/heavenly-jewel-change"))
 
-    @patch("util.CachingProxy._miss", side_effect=miss_mock)
+    @patch("util.Proxy._miss", side_effect=miss_mock)
     def test_request_miss(self, _):
-        proxy = CachingProxy(CACHEFOLDER)
+        proxy = Proxy(CACHEFOLDER)
         resp = proxy.request("GET", "https://www.wuxiaworld.com/novel/heavenly-jewel-change/")
         self.assertIsNotNone(resp)
         self.assertEqual('url', resp.url)
