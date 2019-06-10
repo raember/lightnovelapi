@@ -484,3 +484,13 @@ The wind passed by his smooth (bald) skull, and his empty (impotent) crotch.\xA0
 It only took around... 10 minutes before Lee Shin Woo figured out that this was neither God's mistake, nor the Empire's curse.
 """.replace('\n', ''),
                          chapter.content.text)
+
+
+class WuxiaWorldApiSearchTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.proxy = HarProxy(os.path.join(*Hars.WW_SEARCH))
+
+    def test_search(self):
+        # TODO: The path for those search requests are always the same. Include caching capability in every proxy.
+        pass
