@@ -1,7 +1,7 @@
 import json
 import os
 
-from lightnovel.util.proxy import CachingProxy
+from lightnovel.util.proxy import Proxy
 
 for filename in os.listdir("data"):
     print(f"Checking {filename}...")
@@ -21,7 +21,7 @@ for filename in os.listdir("data"):
             if 'mimeType' in respcontent:
                 mimetype: str = respcontent['mimeType']
                 match = False
-                for ext in CachingProxy.EXTENSIONS:
+                for ext in Proxy.EXTENSIONS:
                     if ext[1:] in mimetype:
                         match = True
                         break

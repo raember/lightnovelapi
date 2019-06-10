@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import time
+import urllib.parse
 from abc import ABC
 from io import BytesIO
 from typing import List, Tuple, Any
@@ -17,12 +18,16 @@ import lightnovel.util.text as textutil
 
 class LightNovelEntity:
     host = ''
+    path = ''
 
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
 
-    def get_url(self, path=''):
-        return self.host + path
+    def get_url(self, path: str = None):
+        if path is not None:
+            return urllib.parse.urljoin(self.host, path)
+        else:
+            return urllib.parse.urljoin(self.host, self.path)
 
 
 class LightNovelPage(LightNovelEntity):
@@ -50,12 +55,6 @@ class LightNovelPage(LightNovelEntity):
     def _parse(self, document: BeautifulSoup) -> bool:
         raise NotImplementedError('Must be overwritten')
 
-    def get_url(self, path: str = None):
-        if path is not None:
-            return self.host + path
-        else:
-            return self.host + self.path
-
     def __str__(self):
         return self.title
 
@@ -67,9 +66,8 @@ class Chapter(LightNovelPage):
     content: Tag = None
 
 
-class ChapterEntry:
+class ChapterEntry(LightNovelEntity):
     title = ''
-    path = ''
 
     def __str__(self):
         return self.title
@@ -92,9 +90,8 @@ class Novel(LightNovelPage):
     image: Image.Image = None
 
 
-class SearchEntry:
+class SearchEntry(LightNovelEntity):
     title = ''
-    path = ''
 
     def __str__(self):
         return self.title
@@ -181,8 +178,8 @@ class LightNovelApi(LightNovelEntity, ABC):
                     self.log.warning("Failed parsing chapter.")
                 else:
                     self.log.info(f"Got chapter '{chapter.title}'")
-                if isinstance(self.proxy, proxyutil.CachingProxy):
-                    proxy: proxyutil.CachingProxy = self.proxy
+                if isinstance(self.proxy, proxyutil.Proxy):
+                    proxy: proxyutil.Proxy = self.proxy
                     if proxy.hit:
                         delay = 0.0
                     else:
