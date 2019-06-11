@@ -1,3 +1,4 @@
+import html
 import json
 from datetime import datetime
 from typing import List
@@ -11,7 +12,7 @@ from lightnovel.util import slugify
 
 class WuxiaWorld:
     host = 'https://www.wuxiaworld.com'
-    name = 'wuxiaworld'
+    name = 'WuxiaWorld'
 
 
 class WuxiaWorldChapterEntry(WuxiaWorld, ChapterEntry):
@@ -19,7 +20,8 @@ class WuxiaWorldChapterEntry(WuxiaWorld, ChapterEntry):
 
 
 class WuxiaWorldBook(WuxiaWorld, Book):
-    chapters: List[WuxiaWorldChapterEntry] = []
+    chapter_entries: List[WuxiaWorldChapterEntry] = []
+    chapters: List['WuxiaWorldChapter'] = []
 
 
 class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
@@ -54,7 +56,6 @@ class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
 
 class WuxiaWorldNovel(WuxiaWorld, Novel):
     books: List[WuxiaWorldBook] = []
-    tags: List[str] = []
 
     def _parse(self, document: BeautifulSoup) -> bool:
         head = document.select_one('head')
@@ -63,7 +64,10 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         self.log.debug(f"Novel title is: {self.title}")
         url = json_data['potentialAction']['target']['urlTemplate']
         self.first_chapter_path = parse_url(url).path
-        self.translator = json_data['author']['name']
+        self.author = json_data['author']['name']  # Usually only translator is given
+        self.translator = self.author
+        self.rights = html.unescape(document.select_one('p.legal').getText())
+        self.date = datetime.fromisoformat(json_data['datePublished'])
         self.img_url = head.select_one('meta[property="og:image"]').get('content')
         url = head.select_one('meta[property="og:url"]').get('content')
         self.path = parse_url(url).path
@@ -87,7 +91,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
             book = WuxiaWorldBook()
             book.title = book_html.select_one('a.collapsed').text.strip()
             self.log.debug(f"Book: {book.title}")
-            book.chapters = self.__extract_chapters(book_html)
+            book.chapter_entries = self.__extract_chapters(book_html)
             books.append(book)
         return books
 
@@ -160,7 +164,8 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                             break
                         new_content.append(child.__copy__())
                         tags_cnt += 1
-                        if tags_cnt <= max_tags_cnt and title in child.text.strip('\n '):
+                        title_str = self.get_title()
+                        if tags_cnt <= max_tags_cnt and title_str != '' and title_str in child.text.strip('\n '):
                             self.log.debug("Title found in paragraph. Discarding previous paragraphs.")
                             new_content = BeautifulSoup(features="html5lib")
                             new_content.clear()

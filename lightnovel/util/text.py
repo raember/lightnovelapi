@@ -1,3 +1,4 @@
+import html
 import re
 import unicodedata
 
@@ -16,3 +17,13 @@ def slugify(value, allow_unicode=False, lowercase=True):
     value = re.sub(r'[^\w\s-]', '', value).strip()
     value = value.lower() if lowercase else value
     return re.sub(r'[-\s]+', '-', value)
+
+
+def sanitize_for_html(string: str) -> str:
+    """
+    Prepares a string for usage in an html/xml environment.
+    Escapes strings for html.
+    :param string: The string to sanitize.
+    :return: The sanitized string.
+    """
+    return html.escape(string.replace("&", "&amp;"))
