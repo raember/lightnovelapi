@@ -138,7 +138,7 @@ class Proxy:
 
     def _hit(self, filepath: str, method: str, url: Url, **kwargs) -> requests.Response:
         with open(filepath, 'rb') as f:
-            return ResponseMock(url, f.read().decode('utf-8'))
+            return ResponseMock(url, f.read())
 
 
 class DirectProxy(Proxy):
@@ -150,22 +150,21 @@ class DirectProxy(Proxy):
 
 
 class ResponseMock(requests.Response):
-    def __init__(self, url: str, text: str, headers=None, status_code=200, cookies=None):
+    def __init__(self, url: str, content: bytes, headers=None, status_code=200, cookies=None):
         super().__init__()
         if headers is None:
             headers = {'content-type': '-'}
         if cookies is None:
             cookies = []
         self.url = url
-        self._text = text
-        self._content = text.encode('utf-8')
+        self._content = content
         self.headers = headers
         self.status_code = status_code
         self.cookies = cookies
 
     @property
     def text(self):
-        return self._text
+        return self._content.decode('utf-8')
 
     @property
     def content(self):
@@ -209,7 +208,7 @@ class HarProxy(Proxy):
     def _hit(self, entry: dict, url: str, **kwargs) -> requests.Response:
         return ResponseMock(
             url,
-            entry['response']['content']['text'],
+            entry['response']['content']['text'].encode('utf-8'),
             entry['response']['headers'],
             entry['response']['status'],
             entry['response']['cookies']

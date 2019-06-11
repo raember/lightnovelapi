@@ -10,11 +10,11 @@ from util.proxy import ResponseMock
 
 
 def request(method, url, **kwargs):
-    return ResponseMock('url', 'str')
+    return ResponseMock('url', b'str')
 
 
 def miss_mock(filepath: str, method: str, url: Url, **kwargs):
-    return ResponseMock('url', 'str')
+    return ResponseMock('url', b'str')
 
 
 class DirectProxyTest(unittest.TestCase):
