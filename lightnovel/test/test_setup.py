@@ -2,7 +2,7 @@ import logging
 
 import gc
 
-from lightnovel.util import CachingProxy
+from lightnovel.util import Proxy
 from lightnovel.wuxiaworld import WuxiaWorldApi
 
 logging.basicConfig(
@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-api = WuxiaWorldApi(CachingProxy('../.cache'))
+api = WuxiaWorldApi(Proxy('../.cache'))
 api.get_entire_novel('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world')
 gc.collect()
 api.get_entire_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
