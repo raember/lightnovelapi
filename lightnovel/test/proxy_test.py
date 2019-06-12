@@ -20,7 +20,7 @@ def miss_mock(filepath: str, method: str, url: Url, **kwargs):
 class DirectProxyTest(unittest.TestCase):
     @patch("requests.request", side_effect=request)
     def test_request(self, _):
-        proxy = DirectProxy()
+        proxy = DirectProxy('../.cache')
         resp = proxy.request('GET', 'https://ipinfo.io/json')
         self.assertIsNotNone(resp)
         self.assertEqual('url', resp.url)
