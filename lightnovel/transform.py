@@ -4,8 +4,6 @@ from abc import ABC
 from typing import List, Dict
 from zipfile import ZipFile
 
-import gc
-
 from lightnovel import Novel, Chapter, Book
 from util import slugify, sanitize_for_html
 
@@ -28,26 +26,6 @@ class Transformer:
                 if n_chapters == 0 or n_chapters != n_chapter_entries:
                     self.log.warning(f"Number of chapters inside book '{book.title}' in Novel '{self.novel.title}' "
                                      f"is unexpectedly {n_chapters}/{n_chapter_entries}")
-
-    def conflate_chapters(self):
-        for book in self.novel.books:
-            chapters: List[Chapter] = []
-            # noinspection PyTypeChecker
-            last_chap: Chapter = None
-            for chapter in book.chapters:
-                if last_chap is None:
-                    last_chap = chapter
-                else:
-                    if last_chap.is_conflatable_with(chapter):
-                        self.log.debug(f"Conflating chapter '{last_chap.title}' with '{chapter.title}'")
-                        last_chap.conflate_with(chapter)
-                    else:
-                        chapters.append(last_chap)
-                        last_chap = chapter
-            chapters.append(last_chap)
-            book.chapters = chapters
-        self.log.debug("Letting GC collect the discarded chapters")
-        gc.collect()
 
     def export(self, path: str):
         raise NotImplementedError
