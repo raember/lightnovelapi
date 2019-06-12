@@ -7,7 +7,7 @@ import urllib.parse
 from abc import ABC
 from datetime import datetime
 from io import BytesIO
-from typing import List, Any
+from typing import List, Any, Tuple, Generator
 
 import requests
 from PIL import Image
@@ -66,8 +66,9 @@ class Chapter(LightNovelPage):
     previous_chapter_path = ''
     next_chapter_path = ''
     content: Tag = None
-    REGEX_CHAPTER_NUMBER = re.compile(r'[cC]hapter\s+\(?(\d+)\)?\s*')
-    REGEX_CHAPTER_SUBNUMBER = re.compile(r'\(?(\d+)\)?$')
+    book: 'Book'
+    REGEX_CHAPTER_NUMBER = re.compile(r'[cC]hapter\s+[(\[]?\s*(\d+)\s*[)\]]?\s*')
+    REGEX_CHAPTER_SUBNUMBER = re.compile(r'[(\[]?(\d+)[)\]]?$')
 
     def is_conflatable_with(self, chapter: 'Chapter') -> bool:
         pattern = re.compile(r'\w+')
@@ -95,7 +96,7 @@ class Chapter(LightNovelPage):
         return -1
 
     def get_title(self):
-        title: str = self.title
+        title: str = self.title.strip()
         match = self.REGEX_CHAPTER_NUMBER.search(title)
         if match is not None:
             title = self._cut_match(match, title)
@@ -201,7 +202,7 @@ class LightNovelApi(LightNovelEntity, ABC):
         """
         return Chapter(self._get_document(url))
 
-    def get_entire_novel(self, url: str, delay=1.0) -> Novel:
+    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, Generator[Chapter, None, None]]:
         """
         Downloads the main page of a novel (including its image) and then all its chapters.
         It also links the chapters to the corresponding books and the image with the novel.
@@ -218,42 +219,48 @@ class LightNovelApi(LightNovelEntity, ABC):
         novel = self.get_novel(url)
         if not novel.parse():
             self.log.warning("Couldn't parse novel page. No chapters will be extracted.")
-            return novel
+
+            def empty_gen():
+                yield from ()
+
+            return novel, empty_gen()
         image = self.get_image(novel.img_url)
         novel.image = image
 
-        # noinspection PyTypeChecker
-        chapter: Chapter = None
-        # noinspection PyTypeChecker
-        last_book: Book = None
-        for book in novel.books:
-            book.chapters = []
-            for chapter_entry in book.chapter_entries:
-                chapter = self.get_chapter(self.get_url(chapter_entry.path))
+        def get_delay():
+            if self.proxy.hit:
+                return 0.0
+            else:
+                return delay
+
+        def get_chapters():
+            for book in novel.books:
+                book.chapters = []
+                for chapter_entry in book.chapter_entries:
+                    chapter = self.get_chapter(self.get_url(chapter_entry.path))
+                    if not chapter.parse():
+                        self.log.warning("Failed parsing chapter.")
+                    else:
+                        self.log.info(f"Got chapter '{chapter.title}'")
+                    chapter.book = book
+                    book.chapters.append(chapter)
+                    yield chapter
+                    time.sleep(get_delay())
+            chapter = novel.books[-1].chapters[-1]
+            while chapter.success and chapter.next_chapter_path:
+                self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
+                chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
                 if not chapter.parse():
-                    self.log.warning("Failed parsing chapter.")
+                    self.log.warning("Failed verifying chapter.")
+                    break
                 else:
                     self.log.info(f"Got chapter '{chapter.title}'")
-                if self.proxy.hit:
-                    delay = 0.0
-                else:
-                    delay = 1.0
-                time.sleep(delay)
-                # chapters.append(chapter)
-                book.chapters.append(chapter)
-                last_book = book
-        while chapter.success and chapter.next_chapter_path:
-            self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
-            chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
-            if not chapter.parse():
-                self.log.warning("Failed verifying chapter.")
-                break
-            else:
-                self.log.info(f"Got chapter '{chapter.title}'")
-            time.sleep(delay)
-            # chapters.append(chapter)
-            last_book.chapters.append(chapter)
-        return novel
+                chapter.book = novel.books[-1]
+                novel.books[-1].chapters.append(chapter)
+                yield chapter
+                time.sleep(get_delay())
+
+        return novel, get_chapters()
 
     def search(self, title: str) -> List[SearchEntry]:
         """
