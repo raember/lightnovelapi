@@ -1,6 +1,6 @@
 import os.path
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from urllib3.util import Url
 
@@ -15,6 +15,10 @@ def request(method, url, **kwargs):
 
 def miss_mock(filepath: str, method: str, url: Url, **kwargs):
     return ResponseMock('url', b'str')
+
+
+def remove(fielpath: str):
+    pass
 
 
 class DirectProxyTest(unittest.TestCase):
@@ -43,6 +47,24 @@ class CachingProxyTest(unittest.TestCase):
         self.assertIsNotNone(resp)
         self.assertEqual('url', resp.url)
         self.assertEqual('str', resp.text)
+
+    @patch("os.remove", side_effect=remove)
+    def test_delete_from_cache_specific(self, f_remove: MagicMock):
+        proxy = Proxy(CACHEFOLDER)
+        resp = proxy.request("GET", "https://httpbin.org/anything", headers={'Accept': 'text/json'})
+        self.assertIsNotNone(resp)
+        self.assertFalse(f_remove.called)
+        proxy.delete_from_cache("https://httpbin.org/anything", headers={'Accept': 'text/json'})
+        self.assertTrue(f_remove.called)
+
+    @patch("os.remove", side_effect=remove)
+    def test_delete_from_cache_last(self, f_remove: MagicMock):
+        proxy = Proxy(CACHEFOLDER)
+        resp = proxy.request("GET", "https://httpbin.org/anything", headers={'Accept': 'text/json'})
+        self.assertIsNotNone(resp)
+        self.assertFalse(f_remove.called)
+        proxy.delete_from_cache()
+        self.assertTrue(f_remove.called)
 
 
 class HarProxyTest(unittest.TestCase):

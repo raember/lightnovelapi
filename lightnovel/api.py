@@ -97,6 +97,9 @@ class Chapter(LightNovelPage):
     def _cut_match(match, string: str) -> str:
         return string[:match.span(0)[0]] + string[match.span(0)[1]:]
 
+    def is_complete(self) -> bool:
+        raise NotImplementedError
+
     def __del__(self):
         if self.book is not None:
             del self.book

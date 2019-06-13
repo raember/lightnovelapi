@@ -11,8 +11,11 @@ from .other import make_sure_dir_exists
 
 class Proxy:
     path = ''
+    use_cache = True
     hit = False
-    EXTENSIONS = ['.html', '.jpg', '.jpeg', '.png', '.css', '.js']
+    last_url = ''
+    last_kwargs = {}
+    EXTENSIONS = ['.html', '.jpg', '.jpeg', '.png', '.css', '.json', '.js']
 
     def __init__(self, path: str = '.cache'):
         self.log = logging.getLogger(self.__class__.__name__)
@@ -62,15 +65,17 @@ class Proxy:
           >>> req = requests.request('GET', 'https://httpbin.org/get')
           <Response [200]>
         """
+        self.last_url = url
+        self.last_kwargs = kwargs
         self.log.debug(f"\033[36m{method}\033[0m {url}")
         left_alignment = ' ' * len(method)
         if kwargs:
             self.log.debug(f"{left_alignment}→{kwargs}")
-        cache = True
-        if 'cache' in kwargs:
-            cache = bool(kwargs['cache'])
-            del kwargs['cache']
-        response: requests.Response = self._request(method, url, cache, **kwargs)
+        use_cache = True
+        if 'use_cache' in kwargs:
+            use_cache = bool(kwargs['use_cache'])
+            del kwargs['use_cache']
+        response: requests.Response = self._request(method, url, use_cache and self.use_cache, **kwargs)
         if response.status_code >= 500:
             color = 31  # Red
         elif response.status_code >= 400:
@@ -91,7 +96,7 @@ class Proxy:
         url_parsed = parse_url(url)
         filepath = self._get_filename(url_parsed, **kwargs)
         if cache:
-            self.log.debug(f"Looking for cached request at '{filepath}'")
+            self.log.debug(f"Looking for cached response at '{filepath}'")
             if os.path.exists(filepath):
                 self.log.debug(f"Cache hit")
                 self.hit = True
@@ -139,6 +144,19 @@ class Proxy:
     def _hit(self, filepath: str, method: str, url: Url, **kwargs) -> requests.Response:
         with open(filepath, 'rb') as f:
             return ResponseMock(url, f.read())
+
+    def delete_from_cache(self, url: str = '', **kwargs):
+        if url == '':
+            url = self.last_url
+            kwargs = self.last_kwargs
+        url_parsed = parse_url(url)
+        filepath = self._get_filename(url_parsed, **kwargs)
+        self.log.debug(f"Deleting cached response at '{filepath}'")
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            self.log.debug("Cache hit. Deleted response.")
+        else:
+            self.log.debug("Cache miss. No response to delete.")
 
 
 class DirectProxy(Proxy):
