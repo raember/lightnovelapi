@@ -22,30 +22,49 @@ class Pipeline(ABC):
         raise NotImplementedError
 
 
+class Parser(Pipeline):
+
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
+        for book, chapter in gen:
+            if not chapter.parse():
+                self.log.warning(f"Failed parsing chapter {chapter}")
+                return
+            else:
+                # TODO: Handle placeholder page for unreleased chapters
+                # TODO: Delete cache for placeholder chapters
+                self.log.info(f"Got chapter {chapter}")
+                chapter.book = book
+                book.chapters.append(chapter)
+                yield book, chapter
+
+
 class ChapterConflation(Pipeline):
     def __init__(self, novel: Novel):
         super().__init__()
         self.novel = novel
 
-    def wrap(self, gen: Generator[Tuple[int, int, Chapter], None, None]) -> Generator[
-        Tuple[int, int, Chapter], None, None]:
-        bi_old, _, last_chap = gen.__next__()
-        for bi, ci, chapter in gen:
-            if chapter is None:
-                break
-            chap_title = chapter.get_title()
-            self.log.debug(f"Checking chapter {bi}.{ci} '{chap_title}'")
-            if bi > bi_old:  # New book. Can't conflate chapters across books.
-                bi_old = bi
-                yield bi, ci, last_chap
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
+        last_book = None
+        last_chap = None
+        for book, chapter in gen:
+            if book != last_book:  # New book. First chapter. Can't conflate chapters across books.
+                if last_book is not None:  # First chapter of at least second book. Yield cached one and cache new one.
+                    yield last_book, last_chap
+                last_book = book
                 last_chap = chapter
-            else:
-                if self.are_conflatable(last_chap, chapter):
-                    self.log.debug(f"Conflating chapter '{last_chap.title}' with '{chapter.title}'")
-                    self.conflate(last_chap, chapter)
-                else:
-                    yield bi, ci, last_chap
-                    last_chap = chapter
+                last_chap.number = 1
+                continue
+
+            if self.are_conflatable(last_chap, chapter):
+                self.log.debug(f"Conflating chapter '{last_chap.title}' with '{chapter.title}'")
+                self.conflate(last_chap, chapter)
+            else:  # Different chapter. Yield cached one and cache new one.
+                self.log.debug(f"Cannot conflate the old chapter with chapter {chapter} '{chapter.get_title()}'")
+                yield book, last_chap
+                last_chap = chapter
+                last_chap.number += 1
+        self.log.debug("Source generator finished. Yielding last chapter")
+        yield last_book, last_chap
 
     @staticmethod
     def are_conflatable(first: Chapter, second: Chapter) -> bool:
@@ -157,7 +176,9 @@ class ContainerFile(EpubFile):
 class ChapterFile(EpubFile):
     id: str = ''
 
-    def __init__(self, book_n: int, chapter_n: int, chapter: Chapter):
+    def __init__(self, chapter: Chapter):
+        book_n = chapter.book.number
+        chapter_n = chapter.number
         self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.get_title())}.xhtml"
         self.id = f"chap_{book_n}_{chapter_n}"
         title = sanitize_for_html(chapter.get_title())
@@ -181,9 +202,9 @@ class ChapterFile(EpubFile):
 class BookFile(EpubFile):
     id: str = ''
 
-    def __init__(self, book_n: int, book: Book):
-        self.filepath = f"OEBPS/{book_n}_{slugify(book.title)}.xhtml"
-        self.id = f"book_{book_n}"
+    def __init__(self, book: Book):
+        self.filepath = f"OEBPS/{book.number}_{slugify(book.title)}.xhtml"
+        self.id = f"book_{book.number}"
         title = sanitize_for_html(book.title)
         self.content = f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -281,8 +302,8 @@ class EpubMaker(Output):
     def __init__(self, novel: Novel, out_path: str = 'out'):
         super().__init__(novel, 'epub', out_path)
 
-    def wrap(self, gen: Generator[Tuple[int, int, Chapter], None, None]) -> Generator[
-        Tuple[int, int, Chapter], None, None]:
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[
+        Tuple[Book, Chapter], None, None]:
         unique_id = slugify(self.novel.get_url())
         filepath = self.join_to_path(self.filename)
         with ZipFile(filepath, 'w') as epub:
@@ -294,28 +315,24 @@ class EpubMaker(Output):
             content.add_file(toc.id, toc.filepath, 'application/x-dtbncx+xml', False)
 
             try:
-                bi_old = 0
-                for bi, ci, chapter in gen:
-                    if chapter is None:
-                        break
-                    self.log.debug(f"Adding chapter {bi}.{ci} '{chapter.get_title()}' to epub")
-                    if bi > bi_old:  # New book
-                        bi_old = bi
+                last_book = None
+                for book, chapter in gen:
+                    self.log.debug(f"Adding chapter {chapter} to epub")
+                    if book != last_book:  # New book
+                        last_book = book
                         book = chapter.book
-                        book_file = BookFile(bi, book)
+                        book_file = BookFile(book)
                         book_file.write_to(epub)
                         toc.add_book(book_file.id, book.title, book_file.filepath)
                         content.add_file(book_file.id, book_file.filepath, 'application/xhtml+xml')
-                        self.log.debug(f"Saved book {bi} '{book.title}' to ({book_file.id}): {book_file.filepath}")
-                    chapter_file = ChapterFile(bi, ci, chapter)
+                        self.log.debug(f"Saved book {book} to ({book_file.id}): {book_file.filepath}")
+                    chapter_file = ChapterFile(chapter)
                     chapter_file.write_to(epub)
                     toc.add_chapter(book_file.id, chapter_file.id, chapter.get_title(), chapter_file.filepath)
                     content.add_file(chapter_file.id, chapter_file.filepath, 'application/xhtml+xml')
                     self.log.debug(
-                        f"Saved chapter {bi}.{ci} '{chapter.get_title()}' to ({chapter_file.id}): {chapter_file.filepath}")
-                    yield bi, ci, chapter
-            except KeyboardInterrupt or GeneratorExit:
-                self.log.warning("Failed to get all chapters. Will finish epub file anyway.")
+                        f"Saved chapter {chapter} to ({chapter_file.id}): {chapter_file.filepath}")
+                    yield book, chapter
             finally:
                 content.compile()
                 content.write_to(epub)
@@ -324,13 +341,10 @@ class EpubMaker(Output):
 
 
 class DeleteChapters(Pipeline):
-    def wrap(self, gen: Generator[Tuple[int, int, Chapter], None, None]):
-        for bi, ci, chapter in gen:
-            if chapter is None:
-                break
-            title = chapter.get_title()
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]):
+        for _, chapter in gen:
             self.delete_chapter(chapter)
-            self.log.debug(f"Deleted chapter {bi}.{ci} '{title}'")
+            self.log.debug(f"Deleted chapter {chapter}")
 
     @staticmethod
     def delete_chapter(chapter: Chapter):
