@@ -108,38 +108,42 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
 
 
 class WuxiaWorldChapter(WuxiaWorld, Chapter):
+    def is_complete(self) -> bool:
+        return self.document.select_one('head meta[name="description"]').has_attr('content')
+
     id = 0
     is_teaser = False
     content: Tag = None
 
     def _parse(self, document: BeautifulSoup):
         head = document.select_one('head')
-        if head.select_one('meta[name="description"]').get('content') is None:
+        url = parse_url(head.select_one('link[rel="canonical"]').get('href'))
+        if url.path == '/Error':
             self.success = False
             return
-        else:
-            self.success = True
-        assert head.select_one('script[type="application/ld+json"]') is not None
-        json_str = head.select_one('script[type="application/ld+json"]').text
-        json_data = json.loads(json_str)
-        self.translator = json_data['author']['name']
-        # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', ' ')
-        url = head.select_one('meta[property="og:url"]').get('content')
-        self.path = parse_url(url).path
-        for script_tag in head.select('script'):
-            script = script_tag.text.strip('\n \t;')
-            if script.startswith('var CHAPTER = '):
-                json_data = json.loads(script[14:])
-                break
-        self.title = json_data['name']
-        self.id = int(json_data['id'])
-        self.is_teaser = json_data['isTeaser']
-        self.previous_chapter_path = json_data['prevChapter']
-        self.next_chapter_path = json_data['nextChapter']
-        if self.title == '':
-            self.log.warning("Couldn't extract data from CHAPTER variable.")
-        self.content = self._process_content(document.select_one('div.p-15 div.fr-view'), self.title)
+        self.success = True
+        if self.is_complete():
+            json_str = head.select_one('script[type="application/ld+json"]').text
+            json_data = json.loads(json_str)
+            self.translator = json_data['author']['name']
+            # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', ' ')
+            url = head.select_one('meta[property="og:url"]').get('content')
+            self.path = parse_url(url).path
+            for script_tag in head.select('script'):
+                script = script_tag.text.strip('\n \t;')
+                if script.startswith('var CHAPTER = '):
+                    json_data = json.loads(script[14:])
+                    break
+            self.title = json_data['name']
+            self.id = int(json_data['id'])
+            self.is_teaser = json_data['isTeaser']
+            self.previous_chapter_path = json_data['prevChapter']
+            self.next_chapter_path = json_data['nextChapter']
+            if self.title == '':
+                self.log.warning("Couldn't extract data from CHAPTER variable.")
+            self.content = self._process_content(document.select_one('div.p-15 div.fr-view'), self.title)
         return True
+
 
     def _process_content(self, content: Tag, title: str) -> Tag:
         new_content = BeautifulSoup(features="html5lib")
@@ -196,9 +200,10 @@ class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
         :return: A list of SearchEntry.
         """
         title_or_abbr = slugify(title_or_abbr, lowercase=False)
+        # TODO: Respect robots.txt and don't use /api/* calls. Instead, use https://www.wuxiaworld.com/sitemap/novels
         data = self._get(
             f"https://www.wuxiaworld.com/api/novels/search?query={title_or_abbr}&count={count}",
-            cache=False,
+            use_cache=False,
             headers={'Accept': 'application/json'}
         ).json()
         assert data['result']

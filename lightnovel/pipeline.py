@@ -8,7 +8,7 @@ from zipfile import ZipFile
 
 from lightnovel import Book
 from lightnovel import Chapter, Novel
-from util import slugify, sanitize_for_html, make_sure_dir_exists
+from util import slugify, sanitize_for_html, make_sure_dir_exists, Proxy
 
 
 class Pipeline(ABC):
@@ -23,6 +23,9 @@ class Pipeline(ABC):
 
 
 class Parser(Pipeline):
+    def __init__(self, proxy: Proxy):
+        super().__init__()
+        self.proxy = proxy
 
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         for book, chapter in gen:
@@ -30,12 +33,14 @@ class Parser(Pipeline):
                 self.log.warning(f"Failed parsing chapter {chapter}")
                 return
             else:
-                # TODO: Handle placeholder page for unreleased chapters
-                # TODO: Delete cache for placeholder chapters
-                self.log.info(f"Got chapter {chapter}")
-                chapter.book = book
-                book.chapters.append(chapter)
-                yield book, chapter
+                if chapter.is_complete():
+                    self.log.info(f"Got chapter {chapter}")
+                    chapter.book = book
+                    book.chapters.append(chapter)
+                    yield book, chapter
+                else:
+                    self.log.info("Chapter not released yet.")
+                    self.proxy.delete_from_cache()
 
 
 class ChapterConflation(Pipeline):
