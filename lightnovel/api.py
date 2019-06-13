@@ -67,6 +67,7 @@ class Chapter(LightNovelPage):
     next_chapter_path = ''
     content: Tag = None
     book: 'Book' = None
+    number = 0
     REGEX_CHAPTER_NUMBER = re.compile(r'^[cC]hapter\s+[(\[]?\s*(\d+)\s*[)\]\-:]*\s*')
     REGEX_CHAPTER_SUBNUMBER = re.compile(r'[(\[]?(\d+)[)\]]?$')
 
@@ -102,9 +103,17 @@ class Chapter(LightNovelPage):
         if self.content is not None:
             del self.content
 
+    def __str__(self):
+        if self.book is None:
+            if self.title == '':
+                return f"?.{self.number}"
+            return f"?.{self.number} {self.get_title()}"
+        return f"{self.book.number}.{self.number} {self.get_title()}"
+
 
 class ChapterEntry(LightNovelEntity):
     title = ''
+    number = 0
 
     def __str__(self):
         return self.title
@@ -115,6 +124,7 @@ class Book:
     chapter_entries: List[ChapterEntry] = []
     chapters: List[Chapter] = []
     novel: 'Novel'
+    number = 0
 
     def __copy__(self) -> 'Book':
         book = type(self)()
@@ -125,7 +135,7 @@ class Book:
         return book
 
     def __str__(self):
-        return f"{self.title} ({len(self.chapters)}/{len(self.chapter_entries)})"
+        return f"{self.number} {self.title} ({len(self.chapters)}/{len(self.chapter_entries)})"
 
 
 class Novel(LightNovelPage):
@@ -142,6 +152,19 @@ class Novel(LightNovelPage):
 
     def __str__(self):
         return f"'{self.title}' by {self.translator} ({len(self.books)} books)"
+
+    def gen_entries(self) -> Generator[Tuple[int, int, Book, ChapterEntry], None, None]:
+        b_n = 0
+        for book in self.books:
+            b_n += 1
+            book.number = b_n
+            book.chapters = []
+            c_n = 0
+            for chapter_entry in book.chapter_entries:
+                c_n += 1
+                chapter_entry.number = c_n
+                self.log.debug(f"Getting chapter entry {b_n}.{c_n} '{chapter_entry.title}'")
+                yield book, chapter_entry
 
 
 class SearchEntry(LightNovelEntity):
@@ -204,7 +227,7 @@ class LightNovelApi(LightNovelEntity, ABC):
         """
         return Chapter(self._get_document(url))
 
-    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, Generator[Tuple[int, int, Chapter], None, None]]:
+    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, Generator[Tuple[Book, Chapter], None, None]]:
         """
         Downloads the main page of a novel (including its image) and then all its chapters.
         It also links the chapters to the corresponding books and the image with the novel.
@@ -236,44 +259,22 @@ class LightNovelApi(LightNovelEntity, ABC):
                 return delay
 
         def get_chapters():
-            bi = 0
-            ci = 0
-            for book in novel.books:
-                book.chapters = []
-                bi += 1
-                ci = 0
-                for chapter_entry in book.chapter_entries:
-                    ci += 1
-                    index_str = f"{bi}.{ci}"
-                    self.log.debug(f"Getting chapter {index_str} '{chapter_entry.title}'")
-                    chapter = self.get_chapter(self.get_url(chapter_entry.path))
-                    if not chapter.parse():
-                        self.log.warning("Failed parsing chapter.")
-                        # TODO: Delete from cache
-                        yield -1, -1, None
-                        return
-                    else:
-                        self.log.info(f"Got chapter {index_str} '{chapter.title}'")
-                    chapter.book = book
-                    book.chapters.append(chapter)
-                    yield bi, ci, chapter
-                    time.sleep(get_delay())
+            c_n = 0
+            book = None
+            for book, chapter_entry in novel.gen_entries():
+                c_n = chapter_entry.number
+                chapter = self.get_chapter(self.get_url(chapter_entry.path))
+                chapter.number = c_n
+                yield book, chapter
+                time.sleep(get_delay())
             chapter = novel.books[-1].chapters[-1]
             while chapter.success and chapter.next_chapter_path:
-                ci += 1
+                c_n += 1
                 self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
                 chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
-                if not chapter.parse():
-                    self.log.warning("Failed verifying chapter.")
-                    # TODO: Remove from cache
-                    break
-                else:
-                    self.log.info(f"Got chapter {bi}.{ci} '{chapter.title}'")
-                chapter.book = novel.books[-1]
-                novel.books[-1].chapters.append(chapter)
-                yield bi, ci, chapter
+                chapter.number = c_n
+                yield book, chapter
                 time.sleep(get_delay())
-
         return novel, get_chapters()
 
     def search(self, title: str) -> List[SearchEntry]:
