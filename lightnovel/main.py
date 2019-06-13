@@ -1,8 +1,7 @@
 import logging
 
 from lightnovel import LightNovelApi
-from pipeline import ChapterConflation
-from transform import EpubTransformer
+from pipeline import ChapterConflation, EpubMaker, DeleteChapters
 from util import Proxy
 
 logging.basicConfig(
@@ -12,44 +11,21 @@ logging.basicConfig(
 )
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
-# def coroutine(func: Callable):
-#     def start(*args, **kwargs):
-#         cr = func(*args, **kwargs)
-#         cr.__next__()
-#         return cr
-#     return start
-#
-#
-# @coroutine
-# def grep(pattern):
-#     while True:
-#         line = yield
-#         if pattern in line:
-#             print(line)
-#
-#
-# g = grep('e')
-# g.send('python')
-# g.send('test')
-# g.send('args')
-# g.close()
-# exit(0)
-
-
-
-
 # Set it
 # URL = 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world'
-URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'
+# URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'
+# URL = 'https://www.wuxiaworld.com/novel/martial-world'
+URL = 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms'
 
 # Make it
 api = LightNovelApi.get_api(URL, Proxy())
 
 # Rip,
 novel, gen = api.get_entire_novel(URL)
-list(ChapterConflation(novel).wrap(gen))
 
 # Export it
-# api.compile_to_latex_pdf(novel, chapters, 'out')
-trans = EpubTransformer(novel)
-trans.export('out.epub')
+conflate = ChapterConflation(novel)
+epub = EpubMaker(novel)
+delete = DeleteChapters()
+
+delete.wrap(epub.wrap(conflate.wrap(gen)))

@@ -89,6 +89,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         books = []
         for book_html in p15.select('div#accordion div.panel.panel-default'):
             book = WuxiaWorldBook()
+            book.novel = self
             book.title = book_html.select_one('a.collapsed').text.strip()
             self.log.debug(f"Book: {book.title}")
             book.chapter_entries = self.__extract_chapters(book_html)
