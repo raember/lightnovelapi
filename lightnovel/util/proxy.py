@@ -6,6 +6,8 @@ from typing import List, Dict
 import requests
 from urllib3.util.url import parse_url, Url
 
+from .other import make_sure_dir_exists
+
 
 class Proxy:
     path = ''
@@ -18,8 +20,7 @@ class Proxy:
         self._load()
 
     def _load(self):
-        if not os.path.exists(self.path):
-            os.makedirs(self.path)  # Don't use exists_ok=True; Might have '..' in path (see tests)
+        make_sure_dir_exists(self.path)
 
     def request(self, method: str, url: str, **kwargs) -> requests.Response:
         """Constructs and sends a :class:`Request <Request>`.
@@ -129,8 +130,7 @@ class Proxy:
     def _miss(self, filepath: str, method: str, url: Url, **kwargs) -> requests.Response:
         response = requests.request(method, url, **kwargs)
         directories = os.path.split(filepath)[0]
-        if not os.path.exists(directories):
-            os.makedirs(directories)  # Don't use exists_ok=True; Might have '..' in path
+        make_sure_dir_exists(directories)
         with open(filepath, 'wb') as fp:
             fp.write(response.content)
         self.log.debug(f"Cached answer in '{filepath}'")
