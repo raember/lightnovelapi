@@ -38,6 +38,7 @@ class LightNovelPage(LightNovelEntity):
     document = None
     success = False
     name = 'generic'
+    language = 'en'
 
     def __init__(self, document: BeautifulSoup):
         super().__init__()
@@ -252,8 +253,7 @@ class LightNovelApi(LightNovelEntity, ABC):
                 yield from ()
 
             return novel, empty_gen()
-        image = self.get_image(novel.img_url)
-        novel.image = image
+        novel.image = self.get_image(novel.img_url)
 
         def get_delay():
             if self.proxy.hit:
