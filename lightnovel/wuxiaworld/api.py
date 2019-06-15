@@ -144,8 +144,9 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
             self.content = self._process_content(document.select_one('div.p-15 div.fr-view'), self.title)
         return True
 
-
-    def _process_content(self, content: Tag, title: str) -> Tag:
+    def _process_content(self, content: Tag, title: str) -> Tag:  # TODO: Make a domain specific cleaner pipeline
+        return content
+        # noinspection PyUnreachableCode
         new_content = BeautifulSoup(features="html5lib")
         new_content.clear()
         tags_cnt = 0
