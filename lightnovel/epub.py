@@ -286,6 +286,7 @@ class TOC(NcxFile):
     unique_id = 'ncxtoc'
     opf_id: str = ''
     title: str = ''
+    content: str = ""
     items: list
     depth: int = 1
     id2title: Dict[str, str]
@@ -338,7 +339,7 @@ class TOC(NcxFile):
       {chapters_str}
     </ncx:navPoint>''')
         books_str = '    ' + '\n    '.join(book_entries)
-        self.content = BeautifulSoup(f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
+        self.content = f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx:ncx xmlns:ncx="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
   <ncx:head>
@@ -353,7 +354,7 @@ class TOC(NcxFile):
   <ncx:navMap>
     {books_str}
   </ncx:navMap>
-</ncx:ncx>""", 'html.parser')
+</ncx:ncx>"""
 
 
 class ImageFile(EpubEntry):
@@ -406,7 +407,7 @@ class EpubFile(ZipFile):
         self.__write_file(mimetype)
         container = ContainerFile()
         self.__write_file(container)
-        self.toc = TOC(unique_id, title, toc_depth)
+        self.toc = TOC(identifier, title, toc_depth)
         self.content = ContentFile(unique_id)
         self.content.title = title
         self.content.language = language
