@@ -174,8 +174,8 @@ class ContentFile(OpfFile):
     def __get_metadata_tag(self, key: str, default: PageElement = None, **kwargs) -> Tag:
         try:
             tag = self.metadata.find(f'dc\:{key}')
-        except:
-            self.log.error("BeautifulSoup s bitching around.")
+        except Exception as e:
+            self.log.error(f"BeautifulSoup is bitching around ({e})")
             tag = None
         if tag is None:
             attrs = {'xmlns': "http://purl.org/dc/elements/1.1/"}
