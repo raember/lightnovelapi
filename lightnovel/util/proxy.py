@@ -96,13 +96,13 @@ class Proxy:
         url_parsed = parse_url(url)
         filepath = self._get_filename(url_parsed, **kwargs)
         if cache:
-            self.log.debug(f"Looking for cached response at '{filepath}'")
+            # self.log.debug(f"Looking for cached response at '{filepath}'")
             if os.path.exists(filepath):
-                self.log.debug(f"Cache hit")
+                self.log.debug(f"Cache hit at '{filepath}'")
                 self.hit = True
                 return self._hit(filepath, method, url_parsed, **kwargs)
             else:
-                self.log.debug("Cache miss")
+                self.log.debug("Cache miss for '{filepath}'")
         self.hit = False
         return self._miss(filepath, method, url_parsed, **kwargs)
 
@@ -111,21 +111,22 @@ class Proxy:
         return os.path.normpath(os.path.join(self.path, url.host + path))
 
     def _extract_extension(self, url: Url, **kwargs) -> str:
-        if url.query is not None:
-            self.log.warning(f"Url has query ({url.query}), which gets ignored when looking in cache.")
+        # if url.query is not None:
+        #     self.log.warning(f"Url has query ({url.query}), which gets ignored when looking in cache.")
         url_ext = os.path.splitext(url.path)[-1]
         if url_ext == '':
-            self.log.debug(f"No extension found in url path ({url.path}).")
+            # self.log.debug(f"No extension found in url path ({url.path}).")
             if 'headers' in kwargs and 'Accept' in kwargs['headers']:
                 accept = kwargs['headers']['Accept']
                 for ext in self.EXTENSIONS:
                     if ext[1:] in accept:
-                        self.log.debug(f"Found extension '{ext[1:]}' in Accept header ({accept}).")
+                        # self.log.debug(f"Found extension '{ext[1:]}' in Accept header ({accept}).")
                         return ext
             else:
-                self.log.debug("No accept headers present")
+                pass
+                # self.log.debug("No accept headers present")
             url_ext = '.html'
-            self.log.warning(f"No extension found using the Accept header. Assuming {url_ext[1:]}.")
+            # self.log.warning(f"No extension found using the Accept header. Assuming {url_ext[1:]}.")
             return url_ext
         if url_ext in self.EXTENSIONS:
             return url_ext
