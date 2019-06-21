@@ -113,7 +113,7 @@ class EpubMaker(Output):
         Tuple[Book, Chapter], None, None]:
         unique_id = slugify(self.novel.title)
         filepath = self.join_to_path(self.filename)
-        with EpubFile(filepath, unique_id, self.novel.title, self.novel.language, identifier=unique_id,
+        with EpubFile(filepath, unique_id, self.novel.title, self.novel.language, identifier=self.novel.get_url(),
                       rights=self.novel.rights, publisher=self.novel.name,
                       subject=' / '.join(['Web Novel', *self.novel.tags]), date=self.novel.date,
                       description=self.novel.description.text, creator=self.novel.author, cover_image=self.novel.image,
