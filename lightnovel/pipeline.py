@@ -5,6 +5,8 @@ from abc import ABC
 from typing import Generator
 from typing import Tuple
 
+from bs4 import Tag
+
 from epub import EpubFile, BookFile, ChapterFile
 from lightnovel import Book
 from lightnovel import Chapter, Novel
@@ -35,12 +37,66 @@ class Parser(Pipeline):
             else:
                 if chapter.is_complete():
                     self.log.info(f"Got chapter {chapter}")
+                    del chapter.document
                     chapter.book = book
                     book.chapters.append(chapter)
                     yield book, chapter
                 else:
                     self.log.info("Chapter not released yet.")
                     self.proxy.delete_from_cache()
+
+
+class HtmlCleaner(Pipeline):
+    ALLOWED_TAGS = ['a',
+                    'abbr',
+                    'acronym',
+                    'applet',
+                    'b',
+                    'bdo',
+                    'big',
+                    'br',
+                    'cite',
+                    'code',
+                    'del',
+                    'dfn',
+                    'em',
+                    'i',
+                    'iframe',
+                    'img',
+                    'ins',
+                    'kbd',
+                    'map',
+                    'noscript',
+                    'ns:svg',
+                    'object',
+                    'q',
+                    'samp',
+                    'script',
+                    'small',
+                    'span',
+                    'strong',
+                    'sub',
+                    'sup',
+                    'tt',
+                    'var',
+                    # Added:
+                    'p',
+                    'div',
+                    'hr']
+
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
+        for book, chapter in gen:
+            desc: Tag
+            for desc in chapter.content.descendants:
+                if desc.name is None:
+                    continue
+                if desc.name not in self.ALLOWED_TAGS:
+                    self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
+                    desc.name = 'span'
+                if desc.name == 'a':
+                    self.log.debug(f"Cleaning link '{desc['href']}'")
+                    desc['href'] = ''
+            yield book, chapter
 
 
 class ChapterConflation(Pipeline):
@@ -136,10 +192,11 @@ class EpubMaker(Output):
 
 
 class DeleteChapters(Pipeline):
-    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]):
-        for _, chapter in gen:
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
+        for book, chapter in gen:
             self.delete_chapter(chapter)
             self.log.debug(f"Deleted chapter {chapter}")
+            yield book, chapter
 
     @staticmethod
     def delete_chapter(chapter: Chapter):

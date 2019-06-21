@@ -1,7 +1,7 @@
 import logging
 
 from lightnovel import LightNovelApi
-from pipeline import ChapterConflation, EpubMaker, Parser
+from pipeline import ChapterConflation, EpubMaker, Parser, HtmlCleaner, DeleteChapters
 from util import Proxy
 
 logging.basicConfig(
@@ -25,11 +25,12 @@ novel, gen = api.get_entire_novel(URL)
 
 # Export it
 gen = Parser(api.proxy).wrap(gen)
+gen = HtmlCleaner().wrap(gen)
 gen = ChapterConflation(novel).wrap(gen)
 gen = EpubMaker(novel).wrap(gen)
-# DeleteChapters().wrap(gen)
+list(DeleteChapters().wrap(gen))
 # gen.__next__()
-gen.__next__()
-gen.__next__()
-gen.__next__()
-gen.close()
+# gen.__next__()
+# gen.__next__()
+# gen.__next__()
+# gen.close()
