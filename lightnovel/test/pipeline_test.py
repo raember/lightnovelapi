@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from lightnovel.test.test_config import Hars
+from lightnovel.test.test_config import Har
 from lightnovel.wuxiaworld import WuxiaWorldApi
 from pipeline import ChapterConflation
 from util import HarProxy
@@ -10,7 +10,7 @@ from util import HarProxy
 class WuxiaWorldApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2))
+        cls.proxy = HarProxy(os.path.join(*Har.WW_HJC_COVER_C1_2))
 
     def test_conflation_chapter_1_2(self):
         api = WuxiaWorldApi(self.proxy)
@@ -25,7 +25,10 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         chapter2.book = novel.books[0]
         chapter2.book.chapters.append(chapter2)
 
-        self.assertTrue(ChapterConflation.are_conflatable(chapter1, chapter2))
+        chapter1.clean_content()
+        chapter2.clean_content()
+
+        self.assertTrue(ChapterConflation.can_be_conflated(chapter1, chapter2))
         ChapterConflation.conflate(chapter1, chapter2)
 
         self.maxDiff = None

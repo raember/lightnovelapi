@@ -2,6 +2,7 @@ import re
 from abc import ABC
 from typing import List
 
+# noinspection PyProtectedMember
 from bs4 import Tag, NavigableString
 
 

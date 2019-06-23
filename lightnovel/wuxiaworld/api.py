@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from typing import List
 
+# noinspection PyProtectedMember
 from bs4 import BeautifulSoup, Tag, NavigableString
 from urllib3.util.url import parse_url
 
@@ -115,13 +116,11 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
     is_teaser = False
     content: Tag = None
 
-    def _parse(self, document: BeautifulSoup):
+    def _parse(self, document: BeautifulSoup) -> bool:
         head = document.select_one('head')
         url = parse_url(head.select_one('link[rel="canonical"]').get('href'))
         if url.path == '/Error':
-            self.success = False
-            return
-        self.success = True
+            return False
         if self.is_complete():
             json_str = head.select_one('script[type="application/ld+json"]').text
             json_data = json.loads(json_str)
@@ -141,49 +140,70 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
             self.next_chapter_path = json_data['nextChapter']
             if self.title == '':
                 self.log.warning("Couldn't extract data from CHAPTER variable.")
-            self.content = self._process_content(document.select_one('div.p-15 div.fr-view'), self.title)
+            self.content = document.select_one('div.p-15 div.fr-view')
         return True
 
-    def _process_content(self, content: Tag, title: str) -> Tag:  # TODO: Make a domain specific cleaner pipeline
-        return content
-        # noinspection PyUnreachableCode
-        new_content = BeautifulSoup(features="html5lib")
+    def clean_content(self):
+        new_content = BeautifulSoup(features="html5lib").new_tag('div')
         new_content.clear()
         tags_cnt = 0
         max_tags_cnt = 4
-        # self.log.info(content.contents)
-        for child in content.children:
-            # self.log.debug(f"==== NEW CHILD ==== {child}")
-            if type(child) == NavigableString:
-                if len(child.strip('\n ')) == 0:
+        for child in self.content.children:
+            if isinstance(child, NavigableString):
+                if len(child.strip('\n  ')) == 0:
                     # self.log.debug("Empty string.")
                     pass
                 else:
                     self.log.warning(f"Non-Empty string: '{child}'.")
-            elif type(child) == Tag:
-                if child.name in ['p', 'div', 'a', 'blockquote', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4']:
+            elif isinstance(child, Tag):
+                # ['p', 'div', 'a', 'blockquote', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5']
+                if child.name in ['div']:
+                    child.name = 'p'
+                if child.name == 'p':
                     if len(child.text.strip('\n ')) == 0:
                         # self.log.debug("Empty paragraph.")
                         pass
                     else:
-                        if child.text == '\nNext Chapter\n':
-                            break
+                        for desc in child.descendants:
+                            if desc.name is None:
+                                continue
+                            from lightnovel import EpubMaker
+                            if desc.name not in EpubMaker.ALLOWED_TAGS:
+                                self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
+                                desc.name = 'span'
+                            if desc.name == 'a':
+                                self.log.debug(f"Cleaning link '{desc['href']}'")
+                                desc['href'] = ''
+                        if child.text in ['Next Chapter', 'Previous Chapter']:
+                            continue
                         new_content.append(child.__copy__())
                         tags_cnt += 1
                         title_str = self.get_title()
                         if tags_cnt <= max_tags_cnt and title_str != '' and title_str in child.text.strip('\n '):
                             self.log.debug("Title found in paragraph. Discarding previous paragraphs.")
-                            new_content = BeautifulSoup(features="html5lib")
                             new_content.clear()
                             tags_cnt = max_tags_cnt
                 elif child.name == 'hr':
-                    # self.log.debug('Rule reached.')
-                    break
+                    new_content.append(child)
+                elif child.name == 'a':
+                    continue
                 else:
                     raise Exception(f"Unexpected tag name: {child}")
             else:
                 raise Exception(f"Unexpected type: {child}")
-        return new_content
+        self.content = new_content
+
+    def __clean_paragraph(self, p: Tag):
+        for desc in p.descendants:
+            if desc.name is None:
+                continue
+            from lightnovel import EpubMaker
+            if desc.name not in EpubMaker.ALLOWED_TAGS:
+                self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
+                desc.name = 'span'
+            if desc.name == 'a':
+                self.log.debug(f"Cleaning link '{desc['href']}'")
+                desc['href'] = ''
 
 
 class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
