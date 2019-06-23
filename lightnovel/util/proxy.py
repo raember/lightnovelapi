@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from datetime import timedelta, datetime
 from typing import List, Dict
 
 import requests
@@ -13,14 +14,17 @@ class Proxy:
     path = ''
     use_cache = True
     hit = False
+    delay: timedelta
+    last_request_time: datetime
     last_url = ''
     last_kwargs = {}
     EXTENSIONS = ['.html', '.jpg', '.jpeg', '.png', '.css', '.json', '.js']
 
-    def __init__(self, path: str = '.cache'):
+    def __init__(self, path: str = '.cache', delay=1.0):
         self.log = logging.getLogger(self.__class__.__name__)
         self.path = path
         self._load()
+        self.delay = timedelta(seconds=delay)
 
     def _load(self):
         make_sure_dir_exists(self.path)
@@ -90,6 +94,7 @@ class Proxy:
             raise Exception("Couldn't interpret response code")
         content_type = response.headers['content-type'] if 'content-type' in response.headers else '-'
         self.log.debug(f"{left_alignment} \033[{color}m← {response.status_code}\033[0m {content_type}")
+        self.last_request_time = datetime.now()
         return response
 
     def _request(self, method: str, url: str, cache: bool = True, **kwargs) -> requests.Response:

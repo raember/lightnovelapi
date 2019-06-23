@@ -2,7 +2,6 @@ import logging
 import os
 import re
 import shutil
-import time
 import urllib.parse
 from abc import ABC
 from datetime import datetime
@@ -234,7 +233,7 @@ class LightNovelApi(LightNovelEntity, ABC):
         """
         return Chapter(self._get_document(url))
 
-    def get_entire_novel(self, url: str, delay=1.0) -> Tuple[Novel, Generator[Tuple[Book, Chapter], None, None]]:
+    def get_entire_novel(self, url: str) -> Tuple[Novel, Generator[Tuple[Book, Chapter], None, None]]:
         """
         Downloads the main page of a novel (including its image) and then all its chapters.
         It also links the chapters to the corresponding books and the image with the novel.
@@ -245,7 +244,6 @@ class LightNovelApi(LightNovelEntity, ABC):
         If the main page did not get parsed properly, the function returns the parsed novel
         and an empty list.
         :param url: The url where the main page of the novel is located at.
-        :param delay: The time duration in seconds for which to wait between downloads.
         :return: A tuple with an instance of the Novel, an image and a list of the downloaded chapters.
         """
         novel = self.get_novel(url)
@@ -258,12 +256,6 @@ class LightNovelApi(LightNovelEntity, ABC):
             return novel, empty_gen()
         novel.image = self.get_image(novel.img_url)
 
-        def get_delay():
-            if self.proxy.hit:
-                return 0.0
-            else:
-                return delay
-
         def get_chapters():
             c_n = 0
             book = None
@@ -272,7 +264,6 @@ class LightNovelApi(LightNovelEntity, ABC):
                 chapter = self.get_chapter(self.get_url(chapter_entry.path))
                 chapter.number = c_n
                 yield book, chapter
-                time.sleep(get_delay())
             chapter = novel.books[-1].chapters[-1]
             while chapter.success and chapter.next_chapter_path:
                 c_n += 1
@@ -280,7 +271,6 @@ class LightNovelApi(LightNovelEntity, ABC):
                 chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
                 chapter.number = c_n
                 yield book, chapter
-                time.sleep(get_delay())
         return novel, get_chapters()
 
     def search(self, title: str) -> List[SearchEntry]:

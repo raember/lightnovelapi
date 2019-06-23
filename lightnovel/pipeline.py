@@ -1,17 +1,19 @@
 import logging
 import os
 import re
+import time
 from abc import ABC
+from datetime import datetime
 from typing import Generator
 from typing import Tuple
-
-# noinspection PyProtectedMember
-from bs4 import Tag, BeautifulSoup
 
 from epub import EpubFile, BookFile, ChapterFile
 from lightnovel import Book
 from lightnovel import Chapter, Novel
 from util import slugify, make_sure_dir_exists, Proxy
+
+
+# noinspection PyProtectedMember
 
 
 class Pipeline(ABC):
@@ -50,30 +52,8 @@ class HtmlCleaner(Pipeline):
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         for book, chapter in gen:
             chapter.clean_content()
+            self.log.debug(f"Cleaned content of {chapter}")
             yield book, chapter
-
-    def _clean_content(self, content: Tag) -> BeautifulSoup:
-        new_content = BeautifulSoup(features="html5lib")
-        for tag in content.children:
-            if tag.name is None:
-                continue
-            if tag.name != 'p':
-                self.log.debug(f"Discarding tag '{tag.name}': {tag}")
-                continue
-            new_content.append(self._clean_paragraph(tag))
-        return new_content
-
-    def _clean_paragraph(self, p: Tag) -> Tag:
-        for desc in p.descendants:
-            if desc.name is None:
-                continue
-            if desc.name not in EpubMaker.ALLOWED_TAGS:
-                self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
-                desc.name = 'span'
-            if desc.name == 'a':
-                self.log.debug(f"Cleaning link '{desc['href']}'")
-                desc['href'] = ''
-        return p
 
 
 class ChapterConflation(Pipeline):
@@ -161,7 +141,6 @@ class EpubMaker(Output):
             self.log.debug(f"Opened file '{filepath}'")
             last_book = None
             for book, chapter in gen:
-                self.log.debug(f"Adding chapter {chapter} to epub")
                 if book != last_book:  # New book
                     last_book = book
                     book = chapter.book
@@ -186,3 +165,24 @@ class DeleteChapters(Pipeline):
     def delete_chapter(chapter: Chapter):
         chapter.book.chapters.remove(chapter)
         del chapter
+
+
+class WaitForProxyDelay(Pipeline):
+    def __init__(self, proxy: Proxy):
+        super().__init__()
+        self.proxy = proxy
+
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
+        for book, chapter in gen:
+            if not self.proxy.hit:
+                now = datetime.now()
+                wait_until = self.proxy.last_request_time + self.proxy.delay
+                if now < wait_until:
+                    wait_remainder = wait_until - now
+                    self.log.debug(f"Wait for {wait_remainder}")
+                    time.sleep(wait_remainder.seconds)
+                else:
+                    self.log.debug("Delay already expired. No need to wait")
+            else:
+                self.log.debug("Hit in cache. No need to wait")
+            yield book, chapter
