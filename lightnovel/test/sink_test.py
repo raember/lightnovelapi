@@ -2,7 +2,7 @@ import os
 import unittest
 
 import lightnovel.util as util
-from lightnovel.test.test_config import Hars
+from lightnovel.test.test_config import Har
 from lightnovel.wuxiaworld import WuxiaWorldApi
 from util import HarProxy
 
@@ -11,14 +11,14 @@ class HJCSinkTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2))
+        cls.proxy = HarProxy(os.path.join(*Har.WW_HJC_COVER_C1_2))
 
     def test_parsing_hjc_description_as_string(self):
         api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         novel.parse()
         self.assertTrue(novel.parse())
-        descr = util.StringHtmlSink().parse(novel.description)
+        description = util.StringHtmlSink().parse(novel.description)
         self.assertEqual("""[Zen’s Synopsis]
 In a world where power means everything, and the strong trample the weak; there was a boy born from a Heavenly Jewel Master. Born in a small country which had to struggle to survive, the boy was expected to do great things. Alas he turned out to have blocked meridians and was unable to cultivate, ending up the trash of society. His father’s tarnished pride… his fianceé’s ultimate dishonour…
 Being almost accidentally killed and left for the dead, heaven finally smiles upon him as a miracle descends, awakening his potential as a Heavenly Jewel Master. Or… is it truly a gift?
@@ -31,13 +31,13 @@ Heavenly Jewels are like the twins born, meaning when both Elemental and Physica
 Those who have the Physical Jewels are known as Physical Jewel Masters, those with Elemental Jewels are Elemental Jewel Masters, and those who train with Heavenly Jewels are naturally called Heavenly Jewel Masters.
 Heavenly Jewel Masters have a highest level of 12 pairs of jewels, as such their training progress is known as Heavenly Jewels 12 Changes.
 Our MC here is an archer who has such a pair of Heavenly Jewels.""",
-                         descr)
+                         description)
 
     def test_parsing_hjc_description_as_markdown(self):
         api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         self.assertTrue(novel.parse())
-        descr = util.MarkdownHtmlSink().parse(novel.description)
+        description = util.MarkdownHtmlSink().parse(novel.description)
         self.assertEqual("""_[Zen’s Synopsis]_
 
 In a world where power means everything, and the strong trample the weak; there was a boy born from a Heavenly Jewel Master. Born in a small country which had to struggle to survive, the boy was expected to do great things. Alas he turned out to have blocked meridians and was unable to cultivate, ending up the trash of society. His father’s tarnished pride… his fianceé’s ultimate dishonour…
@@ -61,14 +61,14 @@ Those who have the Physical Jewels are known as Physical Jewel Masters, those wi
 Heavenly Jewel Masters have a highest level of 12 pairs of jewels, as such their training progress is known as Heavenly Jewels 12 Changes.
 
 Our MC here is an archer who has such a pair of Heavenly Jewels.""",
-                         descr)
+                         description)
 
     def test_parsing_hjc_description_as_latex(self):
         api = WuxiaWorldApi(self.proxy)
         novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
         novel.parse()
         self.assertTrue(novel.parse())
-        descr = util.LatexHtmlSink().parse(novel.description)
+        description = util.LatexHtmlSink().parse(novel.description)
         self.assertEqual("""\\textit{[Zen’s Synopsis]}\\\\ \\relax
 In a world where power means everything, and the strong trample the weak; there was a boy born from a Heavenly Jewel Master. Born in a small country which had to struggle to survive, the boy was expected to do great things. Alas he turned out to have blocked meridians and was unable to cultivate, ending up the trash of society. His father’s tarnished pride... his fianceé’s ultimate dishonour...\\\\ \\relax
 Being almost accidentally killed and left for the dead, heaven finally smiles upon him as a miracle descends, awakening his potential as a Heavenly Jewel Master. Or... is it truly a gift?\\\\ \\relax
@@ -81,4 +81,4 @@ Heavenly Jewels are like the twins born, meaning when both Elemental and Physica
 Those who have the Physical Jewels are known as Physical Jewel Masters, those with Elemental Jewels are Elemental Jewel Masters, and those who train with Heavenly Jewels are naturally called Heavenly Jewel Masters.\\\\ \\relax
 Heavenly Jewel Masters have a highest level of 12 pairs of jewels, as such their training progress is known as Heavenly Jewels 12 Changes.\\\\ \\relax
 Our MC here is an archer who has such a pair of Heavenly Jewels.\\\\ \\relax""",
-                         descr)
+                         description)

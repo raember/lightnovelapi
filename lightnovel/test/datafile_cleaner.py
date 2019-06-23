@@ -17,9 +17,9 @@ for filename in os.listdir("data"):
         for entry in obj['log']['entries']:
             request = entry['request']
             response = entry['response']
-            respcontent = response['content']
-            if 'mimeType' in respcontent:
-                mimetype: str = respcontent['mimeType']
+            resp_content = response['content']
+            if 'mimeType' in resp_content:
+                mimetype: str = resp_content['mimeType']
                 match = False
                 for ext in Proxy.EXTENSIONS:
                     if ext[1:] in mimetype:

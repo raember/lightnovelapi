@@ -1,14 +1,13 @@
 import unittest
+
 from lightnovel import LightNovelApi
 
 
 class ApiFactoryTest(unittest.TestCase):
     def test_no_match(self):
-        HOST = 'www.google.com'
         with self.assertRaises(LookupError):
-            LightNovelApi.get_api(HOST)
+            LightNovelApi.get_api('www.google.com')
 
     def test_wuxiaworld(self):
-        HOST = 'www.wuxiaworld.com'
-        api = LightNovelApi.get_api(HOST)
+        api = LightNovelApi.get_api('www.wuxiaworld.com')
         self.assertIsNotNone(api)

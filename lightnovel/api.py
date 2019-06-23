@@ -62,15 +62,15 @@ class LightNovelPage(LightNovelEntity):
         return self.title
 
 
-class Chapter(LightNovelPage):
+class Chapter(LightNovelPage, ABC):
     translator = ''
     previous_chapter_path = ''
     next_chapter_path = ''
     content: Tag = None
     book: 'Book' = None
     number = 0
-    REGEX_CHAPTER_NUMBER = re.compile(r'^[cC]hapter\s+[(\[]?\s*(\d+)\s*[)\]\-:]*\s*')
-    REGEX_CHAPTER_SUBNUMBER = re.compile(r'[(\[]?(\d+)[)\]]?$')
+    REGEX_CHAPTER_NUMBER = re.compile(r'^chapter\s+[(\[]?\s*(\d+)\s*[)\]\-:]*\s*', re.IGNORECASE)
+    REGEX_CHAPTER_SUB_NUMBER = re.compile(r'[(\[]?(\d+)[)\]]?$')
 
     def get_number(self):
         match = self.REGEX_CHAPTER_NUMBER.search(self.title)
@@ -78,8 +78,8 @@ class Chapter(LightNovelPage):
             return int(match.group(1))
         return -1
 
-    def get_subnumber(self):
-        match = self.REGEX_CHAPTER_SUBNUMBER.search(self.title)
+    def get_sub_number(self):
+        match = self.REGEX_CHAPTER_SUB_NUMBER.search(self.title)
         if match is not None:
             return int(match.group(1))
         return -1
@@ -89,7 +89,7 @@ class Chapter(LightNovelPage):
         match = self.REGEX_CHAPTER_NUMBER.search(title)
         if match is not None:
             title = self._cut_match(match, title)
-        match = self.REGEX_CHAPTER_SUBNUMBER.search(title)
+        match = self.REGEX_CHAPTER_SUB_NUMBER.search(title)
         if match is not None:
             title = self._cut_match(match, title)
         return title.strip('–- ')
@@ -99,6 +99,9 @@ class Chapter(LightNovelPage):
         return string[:match.span(0)[0]] + string[match.span(0)[1]:]
 
     def is_complete(self) -> bool:
+        raise NotImplementedError
+
+    def clean_content(self):
         raise NotImplementedError
 
     def __del__(self):
@@ -142,7 +145,7 @@ class Book:
         return f"{self.number} {self.title} ({len(self.chapters)}/{len(self.chapter_entries)})"
 
 
-class Novel(LightNovelPage):
+class Novel(LightNovelPage, ABC):
     author = ''
     translator = ''
     rights = ''
@@ -289,7 +292,8 @@ class LightNovelApi(LightNovelEntity, ABC):
         raise NotImplementedError
 
     # TODO: Get rid of this atrocity and use a proper architecture to deal with this instead.
-    def compile_to_latex_pdf(self, novel: Novel, chapters: List[Chapter], folder: str):
+    @staticmethod
+    def compile_to_latex_pdf(novel: Novel, chapters: List[Chapter], folder: str):
         from util import LatexHtmlSink
         if os.path.isdir(folder):
             shutil.rmtree(folder)
@@ -300,14 +304,14 @@ class LightNovelApi(LightNovelEntity, ABC):
         os.makedirs(folder)
         os.makedirs(path)
         index = 0
-        chapter_filenames_noext = []
+        chapter_filenames_no_ext = []
         converter = LatexHtmlSink()
         for chapter in chapters:
             index += 1
             chapter_title = textutil.slugify(chapter.title)
-            chapter_filename_noext = f"{index}_{chapter_title}"
-            chapter_path = os.path.join(path, chapter_filename_noext + '.tex')
-            chapter_filenames_noext.append(chapter_filename_noext)
+            chapter_filename_no_ext = f"{index}_{chapter_title}"
+            chapter_path = os.path.join(path, chapter_filename_no_ext + '.tex')
+            chapter_filenames_no_ext.append(chapter_filename_no_ext)
             with open(chapter_path, 'w') as f:
                 f.write(f"\\chapter{{{chapter.title}}}\n{converter.parse(chapter.content)}")
         with open(os.path.join(folder, novel_title, novel_title + '.tex'), 'w') as f:
@@ -318,12 +322,12 @@ class LightNovelApi(LightNovelEntity, ABC):
 \\title{{{novel.title}}}
 \\author{{{novel.translator}}}
 \\newcommand{{\\edition}}{{}}
-\\makeatletter\\@addtoreset{{chapter}}{{part}}\makeatother%
+\\makeatletter\\@addtoreset{{chapter}}{{part}}\\makeatother%
 \\begin{{document}}
 \\thispagestyle{{empty}}
 %\\ThisCenterWallPaper{{1.12}}{{cover.jpg}}
 \\begin{{tikzpicture}}[remember picture,overlay]
-\\node [rectangle, rounded corners, fill=white, opacity=0.75, anchor=south west, minimum width=4cm, minimum height=3cm] (box) at (-0.5,-10) (box){{}};
+\\node[rectangle, rounded corners, fill=white, opacity=0.75, anchor=south west, minimum width=4cm, minimum height=3cm] (box) at (-0.5,-10) (box){{}};
 \\node[anchor=west, color01, xshift=-2cm, yshift=-0.8cm, text width=3.9cm, font=\\sffamily\\bfseries\\scshape\\Large] at (box.north){{\\thetitle}};
 \\node[anchor=west, color01, xshift=-2cm, yshift=-1.8cm, text width=3.9cm, font=\\sffamily\\scriptsize] at (box.north){{\\edition}};
 \\node[anchor=west, color01, xshift=-2cm, yshift=-2.5cm, text width=3.9cm, font=\\sffamily\\bfseries] at (box.north){{\\theauthor}};
@@ -337,7 +341,7 @@ class LightNovelApi(LightNovelEntity, ABC):
 \\newpage
 """
                     )
-            for chapter_title in chapter_filenames_noext:
+            for chapter_title in chapter_filenames_no_ext:
                 f.write(f"\\include{{{chapter_title}}}\n")
             f.write("\\end{document}")
         shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
