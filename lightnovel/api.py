@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+import time
 import urllib.parse
 from abc import ABC
 from datetime import datetime
@@ -223,6 +224,11 @@ class LightNovelApi(LightNovelEntity, ABC):
         return Novel(self._get_document(url))
 
     def get_image(self, url: str) -> Image.Image:
+        """
+        Downloads an image from a url.
+        :param url: The url of the image.
+        :return: An image object representation.
+        """
         return Image.open(BytesIO(self._get(url).content))
 
     def get_chapter(self, url: str) -> Chapter:
@@ -255,23 +261,50 @@ class LightNovelApi(LightNovelEntity, ABC):
 
             return novel, empty_gen()
         novel.image = self.get_image(novel.img_url)
+        return novel, self.get_all_chapters(novel)
 
-        def get_chapters():
-            c_n = 0
-            book = None
-            for book, chapter_entry in novel.gen_entries():
-                c_n = chapter_entry.number
-                chapter = self.get_chapter(self.get_url(chapter_entry.path))
-                chapter.number = c_n
-                yield book, chapter
-            chapter = novel.books[-1].chapters[-1]
-            while chapter.success and chapter.next_chapter_path:
-                c_n += 1
-                self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
-                chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
-                chapter.number = c_n
-                yield book, chapter
-        return novel, get_chapters()
+    def get_all_chapters(self, novel: Novel) -> Generator[Tuple[Book, Chapter], None, None]:
+        """
+        Creates a generator that downloads all the available chapters of a novel, including
+        those that aren't listed on the front page of the novel.
+
+        The generator can be fed into various pipelines.
+        :param novel: The novel from which the chapters should be downloaded. Has to be parsed already.
+        :return: A generator that downloads each chapter.
+        """
+        c_n = 0
+        book = None
+        for book, chapter_entry in novel.gen_entries():
+            c_n = chapter_entry.number
+            chapter = self.get_chapter(self.get_url(chapter_entry.path))
+            chapter.number = c_n
+            yield book, chapter
+            self.wait()
+        chapter = novel.books[-1].chapters[-1]
+        while chapter.success and chapter.next_chapter_path:
+            c_n += 1
+            self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
+            chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
+            chapter.number = c_n
+            yield book, chapter
+            self.wait()
+
+    def wait(self):  # TODO: Prevent scenario: miss -> hit -> no delay -> miss
+        """
+        Waits until the proxy request delay expires.
+        The delay will be omitted if the last request was a hit in the cache.
+        """
+        if not self.proxy.hit:
+            now = datetime.now()
+            wait_until = self.proxy.last_request_time + self.proxy.delay
+            if now < wait_until:
+                wait_remainder = wait_until - now
+                self.log.debug(f"Wait for {wait_remainder}")
+                time.sleep(wait_remainder.seconds)
+            else:
+                self.log.debug("Delay already expired. No need to wait")
+        else:
+            self.log.debug("Hit in cache. No need to wait")
 
     def search(self, title: str) -> List[SearchEntry]:
         """

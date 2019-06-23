@@ -1,7 +1,7 @@
 import logging
 
 from lightnovel import LightNovelApi
-from pipeline import ChapterConflation, EpubMaker, Parser, HtmlCleaner, DeleteChapters, WaitForProxyDelay
+from pipeline import ChapterConflation, EpubMaker, Parser, HtmlCleaner, DeleteChapters
 from util import Proxy
 
 logging.basicConfig(
@@ -12,8 +12,8 @@ logging.basicConfig(
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 # Set it
-# URL = 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world'
-# URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'
+# URL = 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world'  # TODO: Fix missing toc
+# URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'  # TODO: Fix missing cover
 URL = 'https://www.wuxiaworld.com/novel/martial-world'
 # URL = 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms'
 
@@ -30,7 +30,6 @@ gen = HtmlCleaner().wrap(gen)
 gen = ChapterConflation(novel).wrap(gen)
 gen = EpubMaker(novel).wrap(gen)
 gen = DeleteChapters().wrap(gen)
-gen = WaitForProxyDelay(proxy).wrap(gen)
 list(gen)
 # gen.__next__()
 # gen.__next__()

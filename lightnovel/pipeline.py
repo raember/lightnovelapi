@@ -1,9 +1,7 @@
 import logging
 import os
 import re
-import time
 from abc import ABC
-from datetime import datetime
 from typing import Generator
 from typing import Tuple
 
@@ -118,7 +116,7 @@ class Output(Pipeline, ABC):
         return os.path.join(self.path, *paths)
 
 
-class EpubMaker(Output):
+class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
     ALLOWED_TAGS = [
         'a', 'abbr', 'acronym', 'applet', 'b', 'bdo', 'big', 'br', 'cite', 'code', 'del', 'dfn', 'em', 'i', 'iframe',
         'img', 'ins', 'kbd', 'map', 'noscript', 'ns:svg', 'object', 'q', 'samp', 'script', 'small', 'span', 'strong',
@@ -165,24 +163,3 @@ class DeleteChapters(Pipeline):
     def delete_chapter(chapter: Chapter):
         chapter.book.chapters.remove(chapter)
         del chapter
-
-
-class WaitForProxyDelay(Pipeline):
-    def __init__(self, proxy: Proxy):
-        super().__init__()
-        self.proxy = proxy
-
-    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
-        for book, chapter in gen:
-            if not self.proxy.hit:
-                now = datetime.now()
-                wait_until = self.proxy.last_request_time + self.proxy.delay
-                if now < wait_until:
-                    wait_remainder = wait_until - now
-                    self.log.debug(f"Wait for {wait_remainder}")
-                    time.sleep(wait_remainder.seconds)
-                else:
-                    self.log.debug("Delay already expired. No need to wait")
-            else:
-                self.log.debug("Hit in cache. No need to wait")
-            yield book, chapter
