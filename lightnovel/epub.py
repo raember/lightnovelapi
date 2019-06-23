@@ -7,6 +7,7 @@ from typing import Dict
 from zipfile import ZipFile, ZIP_STORED
 
 from PIL.Image import Image
+# noinspection PyProtectedMember
 from bs4 import BeautifulSoup, Tag, PageElement
 
 from lightnovel import Book
@@ -18,7 +19,7 @@ class EpubEntry(ABC):
     log: logging.Logger
     filepath: str = ''
     content: AnyStr = None
-    mimetype = ''
+    mime_type = ''
     ext = ''
     unique_id = ''
 
@@ -34,30 +35,30 @@ class EpubEntry(ABC):
 
 
 class HtmlFile(EpubEntry, ABC):
-    mimetype = 'application/html'
+    mime_type = 'application/html'
     ext = 'html'
     content: BeautifulSoup = None
 
 
 class XHtmlFile(EpubEntry, ABC):
-    mimetype = 'application/xhtml+xml'
+    mime_type = 'application/xhtml+xml'
     ext = 'xhtml'
     content: BeautifulSoup = None
 
 
 class CssFile(EpubEntry, ABC):
-    mimetype = 'text/css'
+    mime_type = 'text/css'
     ext = 'css'
 
 
 class OpfFile(EpubEntry, ABC):
-    mimetype = 'application/oebps-package+xml'
+    mime_type = 'application/oebps-package+xml'
     ext = 'opf'
     content: BeautifulSoup = None
 
 
 class NcxFile(EpubEntry, ABC):
-    mimetype = 'application/x-dtbncx+xml'
+    mime_type = 'application/x-dtbncx+xml'
     ext = 'ncx'
     content: BeautifulSoup = None
 
@@ -173,7 +174,7 @@ class ContentFile(OpfFile):
 
     def __get_metadata_tag(self, key: str, default: PageElement = None, **kwargs) -> Tag:
         try:
-            tag = self.metadata.find(f'dc\:{key}')
+            tag = self.metadata.find(f'dc\\:{key}')
         except Exception as e:
             self.log.error(f"BeautifulSoup is bitching around ({e})")
             tag = None
@@ -193,7 +194,7 @@ class ContentFile(OpfFile):
         attrs = {
             'id': file.unique_id,
             'href': file.filepath.replace("OEBPS/", ""),
-            'media-type': file.mimetype
+            'media-type': file.mime_type
         }
         attrs.update(kwargs)
         manifest_entry = self.content.new_tag('item', attrs=attrs)
@@ -237,7 +238,7 @@ class ChapterFile(XHtmlFile):
         self.chapter = chapter
         book_n = chapter.book.number
         chapter_n = chapter.number
-        self.sanatized_title = sanitize_for_html(chapter.get_title())
+        self.sanitized_title = sanitize_for_html(chapter.get_title())
         self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.get_title())}.xhtml"
         self.unique_id = f"chap_{book_n}_{chapter_n}"
         title = sanitize_for_html(chapter.get_title())
@@ -310,7 +311,7 @@ class TOC(NcxFile):
 
     def add_chapter(self, book: BookFile, chapter: ChapterFile):
         self.structure[book.unique_id].append(chapter.unique_id)
-        self.id2title[chapter.unique_id] = chapter.sanatized_title
+        self.id2title[chapter.unique_id] = chapter.sanitized_title
         self.id2filepath[chapter.unique_id] = chapter.filepath.replace("OEBPS/", "")
 
     def compile(self):
@@ -358,7 +359,7 @@ class TOC(NcxFile):
 
 
 class ImageFile(EpubEntry):
-    mimetype = 'image/*'
+    mime_type = 'image/*'
 
     def __init__(self, filename: str, image: Image, unique_id: str):
         super().__init__()
@@ -397,11 +398,11 @@ class CoverFile(XHtmlFile):
 
 
 class EpubFile(ZipFile):
+    # noinspection PyPep8Naming
     def __init__(self, file: str, unique_id: str, title: str, language: str, identifier: str, rights: str = None,
                  publisher: str = None, subject: str = None, date: datetime = None, description: str = None,
                  creator: str = None, cover_image: Image = None, toc_depth=2, mode="r", compression=ZIP_STORED,
-                 allowZip64=True,
-                 compresslevel=None):
+                 allowZip64=True, compresslevel=None):
         super().__init__(file, mode, compression, allowZip64, compresslevel)
         mimetype = MimeTypeFile()
         self.__write_file(mimetype)
@@ -453,7 +454,7 @@ class EpubFile(ZipFile):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exit_type, value, traceback):
         self.toc.compile()
         self.writestr(self.toc.filepath, self.toc.content)
         self.writestr(self.content.filepath, self.content.content.prettify())

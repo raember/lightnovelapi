@@ -5,7 +5,8 @@ from abc import ABC
 from typing import Generator
 from typing import Tuple
 
-from bs4 import Tag
+# noinspection PyProtectedMember
+from bs4 import Tag, BeautifulSoup
 
 from epub import EpubFile, BookFile, ChapterFile
 from lightnovel import Book
@@ -19,8 +20,7 @@ class Pipeline(ABC):
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
 
-    def wrap(self, gen: Generator[Tuple[int, int, Chapter], None, None]) -> Generator[
-        Tuple[int, int, Chapter], None, None]:
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         raise NotImplementedError
 
 
@@ -47,56 +47,33 @@ class Parser(Pipeline):
 
 
 class HtmlCleaner(Pipeline):
-    ALLOWED_TAGS = ['a',
-                    'abbr',
-                    'acronym',
-                    'applet',
-                    'b',
-                    'bdo',
-                    'big',
-                    'br',
-                    'cite',
-                    'code',
-                    'del',
-                    'dfn',
-                    'em',
-                    'i',
-                    'iframe',
-                    'img',
-                    'ins',
-                    'kbd',
-                    'map',
-                    'noscript',
-                    'ns:svg',
-                    'object',
-                    'q',
-                    'samp',
-                    'script',
-                    'small',
-                    'span',
-                    'strong',
-                    'sub',
-                    'sup',
-                    'tt',
-                    'var',
-                    # Added:
-                    'p',
-                    'div',
-                    'hr']
-
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         for book, chapter in gen:
-            desc: Tag
-            for desc in chapter.content.descendants:
-                if desc.name is None:
-                    continue
-                if desc.name not in self.ALLOWED_TAGS:
-                    self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
-                    desc.name = 'span'
-                if desc.name == 'a':
-                    self.log.debug(f"Cleaning link '{desc['href']}'")
-                    desc['href'] = ''
+            chapter.clean_content()
             yield book, chapter
+
+    def _clean_content(self, content: Tag) -> BeautifulSoup:
+        new_content = BeautifulSoup(features="html5lib")
+        for tag in content.children:
+            if tag.name is None:
+                continue
+            if tag.name != 'p':
+                self.log.debug(f"Discarding tag '{tag.name}': {tag}")
+                continue
+            new_content.append(self._clean_paragraph(tag))
+        return new_content
+
+    def _clean_paragraph(self, p: Tag) -> Tag:
+        for desc in p.descendants:
+            if desc.name is None:
+                continue
+            if desc.name not in EpubMaker.ALLOWED_TAGS:
+                self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
+                desc.name = 'span'
+            if desc.name == 'a':
+                self.log.debug(f"Cleaning link '{desc['href']}'")
+                desc['href'] = ''
+        return p
 
 
 class ChapterConflation(Pipeline):
@@ -116,7 +93,7 @@ class ChapterConflation(Pipeline):
                 last_chap.number = 1
                 continue
 
-            if self.are_conflatable(last_chap, chapter):
+            if self.can_be_conflated(last_chap, chapter):
                 self.log.debug(f"Conflating chapter '{last_chap.title}' with '{chapter.title}'")
                 self.conflate(last_chap, chapter)
             else:  # Different chapter. Yield cached one and cache new one.
@@ -128,7 +105,7 @@ class ChapterConflation(Pipeline):
         yield last_book, last_chap
 
     @staticmethod
-    def are_conflatable(first: Chapter, second: Chapter) -> bool:
+    def can_be_conflated(first: Chapter, second: Chapter) -> bool:
         pattern = re.compile(r'[\w\d]+')
         owns = pattern.findall(first.get_title())
         others = pattern.findall(second.get_title())
@@ -145,7 +122,7 @@ class ChapterConflation(Pipeline):
         DeleteChapters.delete_chapter(second)
 
 
-class Output(Pipeline):
+class Output(Pipeline, ABC):
 
     def __init__(self, novel: Novel, ext: str, out_path: str = 'out'):
         super().__init__()
@@ -162,11 +139,18 @@ class Output(Pipeline):
 
 
 class EpubMaker(Output):
+    ALLOWED_TAGS = [
+        'a', 'abbr', 'acronym', 'applet', 'b', 'bdo', 'big', 'br', 'cite', 'code', 'del', 'dfn', 'em', 'i', 'iframe',
+        'img', 'ins', 'kbd', 'map', 'noscript', 'ns:svg', 'object', 'q', 'samp', 'script', 'small', 'span', 'strong',
+        'sub', 'sup', 'tt', 'var',
+        # Added:
+        'p', 'div', 'hr'
+    ]
+
     def __init__(self, novel: Novel, out_path: str = 'out'):
         super().__init__(novel, 'epub', out_path)
 
-    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[
-        Tuple[Book, Chapter], None, None]:
+    def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         unique_id = slugify(self.novel.title)
         filepath = self.join_to_path(self.filename)
         with EpubFile(filepath, unique_id, self.novel.title, self.novel.language, identifier=self.novel.get_url(),

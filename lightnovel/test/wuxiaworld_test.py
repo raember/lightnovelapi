@@ -2,7 +2,7 @@ import os
 import unittest
 from datetime import datetime, timezone
 
-from lightnovel.test.test_config import Hars
+from lightnovel.test.test_config import Har
 from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
 from util import HarProxy
 
@@ -10,7 +10,7 @@ from util import HarProxy
 class WuxiaWorldApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_HJC_COVER_C1_2))
+        cls.proxy = HarProxy(os.path.join(*Har.WW_HJC_COVER_C1_2))
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy)
@@ -109,6 +109,7 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         self.assertEqual('', chapter.previous_chapter_path)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.next_chapter_path)
         self.maxDiff = None
+        chapter.clean_content()
         self.assertEqual("""
 Heavenly Bow Empire Capital City, Heavenly Bow City, Official Roads.
 Heavenly Bow Empire is a small country in the western regions of Boundless Mainland (Hao Miao Da Lu). It isn’t bound to any larger countries, and its environment and climate are extremely suitable for humans to live in.
@@ -156,6 +157,7 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.previous_chapter_path)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-03', chapter.next_chapter_path)
         self.maxDiff = None
+        chapter.clean_content()
         self.assertEqual("""
 Zhou Weiqing’s eyes widened as his dreams were about to come true. Just at that moment, a feminine voice shouted out “Your highness, be careful! There’s someone here!”
 Upon hearing the shout, the pink haired girl acted like a startled little bird, quickly ducking into the water up to her neck, as she looked around in panic.
@@ -188,7 +190,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_WMW_COVER_C1))
+        cls.proxy = HarProxy(os.path.join(*Har.WW_WMW_COVER_C1))
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy)
@@ -263,6 +265,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
         self.assertEqual('', chapter.previous_chapter_path)
         self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-2', chapter.next_chapter_path)
         self.maxDiff = None
+        chapter.clean_content()
         self.assertEqual("""
 Reincarnation
 ‘My head really hurts….’
@@ -343,7 +346,7 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_SFF_Cover_C1_78F))
+        cls.proxy = HarProxy(os.path.join(*Har.WW_SFF_Cover_C1_78F))
 
     def test_parsing_novel(self):
         api = WuxiaWorldApi(self.proxy)
@@ -409,6 +412,7 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
         self.assertEqual('', chapter.previous_chapter_path)
         self.assertEqual('/novel/stop-friendly-fire/sff-chapter-2', chapter.next_chapter_path)
         self.maxDiff = None
+        chapter.clean_content()
         self.assertEqual("""
 "Now, let's clear things up."
 The woman put down the tobacco pipe she had been gently biting down on, puffed out the smoke, and licked her lips. She was a beautiful woman with striking red, wavy hair, but more importantly was the fact that she was a 'god'.\xA0
@@ -499,7 +503,7 @@ It only took around... 10 minutes before Lee Shin Woo figured out that this was 
 class WuxiaWorldApiSearchTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Hars.WW_SEARCH))
+        cls.proxy = HarProxy(os.path.join(*Har.WW_SEARCH))
 
     def test_search_title(self):
         api = WuxiaWorldApi(self.proxy)
