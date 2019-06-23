@@ -144,7 +144,8 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
         return True
 
     def clean_content(self):
-        new_content = BeautifulSoup(features="html5lib").new_tag('div')
+        bs = BeautifulSoup(features="html5lib")
+        new_content = bs.new_tag('div')
         new_content.clear()
         tags_cnt = 0
         max_tags_cnt = 4
@@ -157,23 +158,28 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                     self.log.warning(f"Non-Empty string: '{child}'.")
             elif isinstance(child, Tag):
                 # ['p', 'div', 'a', 'blockquote', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5']
-                if child.name in ['div']:
-                    child.name = 'p'
-                if child.name == 'p':
+                if child.name == 'blockquote':  # Blockquotes have to have a paragraph within
+                    p = bs.new_tag('p')
+                    for children in child.children:
+                        p.append(children)
+                    child.clear()
+                    child.append(p)
+                if child.name in ['p', 'div', 'blockquote']:
+                    #     child.name = 'p'
+                    # if child.name == 'p':
                     if len(child.text.strip('\n ')) == 0:
                         # self.log.debug("Empty paragraph.")
                         pass
                     else:
                         for desc in child.descendants:
-                            if desc.name is None:
-                                continue
-                            from lightnovel import EpubMaker
-                            if desc.name not in EpubMaker.ALLOWED_TAGS:
-                                self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
-                                desc.name = 'span'
-                            if desc.name == 'a':
-                                self.log.debug(f"Cleaning link '{desc['href']}'")
-                                desc['href'] = ''
+                            if isinstance(desc, Tag):
+                                from lightnovel import EpubMaker
+                                if desc.name not in EpubMaker.ALLOWED_TAGS:
+                                    self.log.debug(f"Tag '{desc.name}' is not allowed in an epub. Changing to span")
+                                    desc.name = 'span'
+                                if desc.name == 'a':
+                                    self.log.debug(f"Cleaning link '{desc}'")
+                                    desc.attrs = {}
                         if child.text in ['Next Chapter', 'Previous Chapter']:
                             continue
                         new_content.append(child.__copy__())
@@ -203,7 +209,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                 desc.name = 'span'
             if desc.name == 'a':
                 self.log.debug(f"Cleaning link '{desc['href']}'")
-                desc['href'] = ''
+                desc.attrs = {}
 
 
 class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
