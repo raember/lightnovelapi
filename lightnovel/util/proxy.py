@@ -107,7 +107,7 @@ class Proxy:
                 self.hit = True
                 return self._hit(filepath, method, url_parsed, **kwargs)
             else:
-                self.log.debug("Cache miss for '{filepath}'")
+                self.log.debug(f"Cache miss for '{filepath}'")
         self.hit = False
         return self._miss(filepath, method, url_parsed, **kwargs)
 
