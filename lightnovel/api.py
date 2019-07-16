@@ -299,8 +299,8 @@ class LightNovelApi(LightNovelEntity, ABC):
             wait_until = self.proxy.last_request_time + self.proxy.delay
             if now < wait_until:
                 wait_remainder = wait_until - now
-                self.log.debug(f"Wait for {wait_remainder}")
-                time.sleep(wait_remainder.seconds)
+                self.log.debug(f"Wait for {wait_remainder.total_seconds()} seconds")
+                time.sleep(wait_remainder.total_seconds())
             else:
                 self.log.debug("Delay already expired. No need to wait")
         else:
