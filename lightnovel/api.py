@@ -274,13 +274,13 @@ class LightNovelApi(LightNovelEntity, ABC):
         """
         c_n = 0
         book = None
+        chapter = None
         for book, chapter_entry in novel.gen_entries():
             c_n = chapter_entry.number
             chapter = self.get_chapter(self.get_url(chapter_entry.path))
             chapter.number = c_n
             yield book, chapter
             self.wait()
-        chapter = novel.books[-1].chapters[-1]
         while chapter.success and chapter.next_chapter_path:
             c_n += 1
             self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
