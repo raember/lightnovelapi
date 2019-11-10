@@ -260,6 +260,7 @@ class LightNovelApi(LightNovelEntity, ABC):
                 yield from ()
 
             return novel, empty_gen()
+        self.log.info(f"Downloading novel {novel.title} ({novel.get_url()}).")
         novel.image = self.get_image(novel.img_url)
         return novel, self.get_all_chapters(novel)
 
