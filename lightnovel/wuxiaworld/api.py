@@ -57,6 +57,7 @@ class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
 
 class WuxiaWorldNovel(WuxiaWorld, Novel):
     books: List[WuxiaWorldBook] = []
+    karmaActive: bool = False
 
     def _parse(self, document: BeautifulSoup) -> bool:
         head = document.select_one('head')
@@ -69,6 +70,11 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         self.translator = self.author
         self.rights = html.unescape(document.select_one('p.legal').getText())
         self.date = datetime.fromisoformat(json_data['datePublished'])
+        for tag in head.select('script[type="text/javascript"]'):
+            if "karmaActive" in tag.text:
+                self.karmaActive = "karmaActive: true" in tag.text
+        if self.karmaActive:
+            self.log.warning("This novel might require karma points to unlock chapters.")
         self.img_url = head.select_one('meta[property="og:image"]').get('content')
         url = head.select_one('meta[property="og:url"]').get('content')
         self.path = parse_url(url).path
@@ -110,10 +116,11 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
 
 class WuxiaWorldChapter(WuxiaWorld, Chapter):
     def is_complete(self) -> bool:
-        return self.document.select_one('head meta[name="description"]').has_attr('content')
+        return self.document.select_one('head meta[name="description"]').has_attr('content') and not self.karma_locked
 
     id = 0
     is_teaser = False
+    karma_locked = False
     content: Tag = None
 
     def _parse(self, document: BeautifulSoup) -> bool:
@@ -141,6 +148,10 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
             if self.title == '':
                 self.log.warning("Couldn't extract data from CHAPTER variable.")
             self.content = document.select_one('div.p-15 div.fr-view')
+            karma_well = self.content.select_one('div.well')
+            self.karma_locked = karma_well is not None
+            if self.karma_locked:
+                self.log.warning("This chapter requires karma points to unlock.")
         return True
 
     def clean_content(self):
@@ -193,6 +204,8 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                     new_content.append(child)
                 elif child.name == 'a':
                     continue
+                elif child.name in ['ol', 'ul']:
+                    new_content.append(child)
                 else:
                     raise Exception(f"Unexpected tag name: {child}")
             else:

@@ -500,6 +500,223 @@ It only took around... 10 minutes before Lee Shin Woo figured out that this was 
                          chapter.content.text)
 
 
+class WuxiaWorldApiASTTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.proxy = HarProxy(os.path.join(*Har.WW_AST_Cover_C1_102))
+
+    def test_parsing_novel(self):
+        api = WuxiaWorldApi(self.proxy)
+        novel = api.get_novel('https://www.wuxiaworld.com/novel/ancient-strengthening-technique')
+        self.assertIsNotNone(novel)
+        self.assertTrue(isinstance(novel, WuxiaWorldNovel))
+        self.assertFalse(novel.success)
+        self.assertTrue(novel.parse())
+        self.assertTrue(novel.success)
+        self.assertTrue(novel.karmaActive)
+        self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
+        self.assertEqual('/novel/ancient-strengthening-technique', novel.path)
+        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique', novel.get_url())
+        self.assertEqual('Ancient Strengthening Technique', novel.title)
+        self.assertEqual('lordbluefire_98448380', novel.author)
+        self.assertEqual('lordbluefire_98448380', novel.translator)
+        self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.rights)
+        self.assertEqual(datetime(2016, 11, 30, 0, 0), novel.date)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', novel.first_chapter_path)
+        self.assertListEqual(['Chinese', 'Completed', 'Completed Recs'], novel.tags)
+        self.assertEqual(
+            'https://cdn.wuxiaworld.com/images/covers/ast.jpg?ver=3113ede98eb17afea8006f0024b2290aecd68c05',
+            novel.img_url)
+        self.maxDiff = None
+        self.assertEqual("\nSynopsis:"
+                         "A human warrior cultivating the Ancient Strengthening Technique has transcended dimensions "
+                         "and arrived on Kyushu. Together with twelve ravishing beauties with looks that were "
+                         "unmatched in their generation, will he be able to stand on the summit of this world?"
+                         "This novel is about the main character, named Qing Shui, who transcended dimensions and "
+                         "arrived in the world of nine continents. Storms of blood and wind, resulting in corpses and "
+                         "bones strewn about are extremely common here. The young warrior Qing Shui forged ahead in "
+                         "his path to cultivate, using 10 years to train himself, only to seek vengeance for the one "
+                         "who had forsaken his mother! On the road, he had a chance encounter with the cold beauty ("
+                         "ice princess) Shi Qing Zhuang, incurring hatred and vengeance from her fiancée – Situ Bu "
+                         "Fan. After entering the Hundred Miles City, Qing Shui got acquainted with a dignified and "
+                         "beautiful lady named Yu He and other Xian Tian Realm cultivators – After which, "
+                         "he willingly invited tribulation on himself, after killing the young master of the Gong "
+                         "Yang Clan because of Yu He, and was forced into a corner. Luckily for Qing Shui, "
+                         "a lady as beautiful as a celestial maiden named Yi Ye Jian Ge rushed back to save him from "
+                         "afar, following which a bloody battle ensued. Can Qing Shui turn danger into safety, "
+                         "averting disaster? And his relationships with the various beautiful ladies, what will it "
+                         "develop into?\n",
+                         novel.description.text
+                         )
+        self.assertEqual(16, len(novel.books))
+        book = novel.books[0]
+        self.assertEqual('Vol 1: Divine Strength Awakened, Mysteries of his birth', book.title)
+        self.assertEqual(113, len(book.chapter_entries))
+        chapter = book.chapter_entries[0]
+        self.assertEqual('Chapter 1 - Qing Clan, Qing Shui', chapter.title)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.path)
+        book = novel.books[1]
+        self.assertEqual('Vol 2: Legend of the Hundred Miles City, Peerless and Independent', book.title)
+        self.assertEqual(46, len(book.chapter_entries))
+        book = novel.books[2]
+        self.assertEqual('Vol 3: The Resplendent Fireworks, Mountains and Sea as a Portrait', book.title)
+        self.assertEqual(83, len(book.chapter_entries))
+        book = novel.books[3]
+        self.assertEqual('Vol 4: Tears of a Beauty destroying the kingdom, the Twelve Portraits of Beauties',
+                         book.title)
+        self.assertEqual(98, len(book.chapter_entries))
+        book = novel.books[4]
+        self.assertEqual('Vol 5: Greencloud Continent of the Nine Continents, Stepping into the Yan Clan', book.title)
+        self.assertEqual(101, len(book.chapter_entries))
+        book = novel.books[5]
+        self.assertEqual('Vol 6: Aura of a King, Sword pointing to the Dome of Heavens', book.title)
+        self.assertEqual(65, len(book.chapter_entries))
+        book = novel.books[6]
+        self.assertEqual('Vol 7: Path of a Martial Saint, Heart of the Strong', book.title)
+        self.assertEqual(86, len(book.chapter_entries))
+        book = novel.books[7]
+        self.assertEqual('Vol 8: The Prosperous Central Continent, The Journey Across It', book.title)
+        self.assertEqual(150, len(book.chapter_entries))
+        book = novel.books[8]
+        self.assertEqual('Vol 9: Southern Viewing Continent, Hatred of the Previous Years', book.title)
+        self.assertEqual(80, len(book.chapter_entries))
+        book = novel.books[9]
+        self.assertEqual('Vol 10: Eastern Victory Divine Continent, Exquisite Bell Spirit', book.title)
+        self.assertEqual(110, len(book.chapter_entries))
+        book = novel.books[10]
+        self.assertEqual('Vol 11: Storm in the Fifth Continent, The Northern Sacred Lu Continent', book.title)
+        self.assertEqual(125, len(book.chapter_entries))
+        book = novel.books[11]
+        self.assertEqual(
+            'Vol 12: Stepping on Lion King Ridge, Trampling with such force until the mountains and rivers crumble',
+            book.title)
+        self.assertEqual(74, len(book.chapter_entries))
+        book = novel.books[12]
+        self.assertEqual(
+            'Vol 13: Arriving at the Four Continents, Hundred Dynasties, Hundred States. The path of a State Master',
+            book.title)
+        self.assertEqual(178, len(book.chapter_entries))
+        book = novel.books[13]
+        self.assertEqual('Vol 14: Soaring Dragon, Dancing Phoenix, Haohan Continent', book.title)
+        self.assertEqual(280, len(book.chapter_entries))
+        book = novel.books[14]
+        self.assertEqual('Vol 15: Demons & Monsters Dancing In Riotous Reverly, Beautiful Women Are Like Poetry',
+                         book.title)
+        self.assertEqual(200, len(book.chapter_entries))
+        book = novel.books[15]
+        self.assertEqual('Vol 16 (Final): Oceanic Grand World, Legend of the Nine Continents!', book.title)
+        self.assertEqual(700, len(book.chapter_entries))
+
+    def test_parsing_chapter_1(self):
+        api = WuxiaWorldApi(self.proxy)
+        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1')
+        self.assertIsNotNone(chapter)
+        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertFalse(chapter.success)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
+        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1',
+                         chapter.get_url())
+        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+        self.assertEqual("Chapter 1 - Qing Clan, Qing Shui", chapter.title)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.path)
+        self.assertEqual('lordbluefire_98448380', chapter.translator)
+        self.assertEqual(14875, chapter.id)
+        self.assertFalse(chapter.is_teaser)
+        self.assertFalse(chapter.karma_locked)
+        self.assertEqual('', chapter.previous_chapter_path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-2', chapter.next_chapter_path)
+        self.maxDiff = None
+        chapter.clean_content()
+        self.assertEqual("""
+This is a small village surrounded by hills and mountains, the scenery is breathtaking. The village’s surroundings are filled with the abundance of flora and fauna. Even the quality of the air here is fragrant beyond comparison.
+
+Sitting atop of a hillside, was a little boy, roughly about five years old. The little boy was frail and weak, with a very thin physique. Currently, the little boy was in a daze. If anyone was to look at the little boy at this moment, they would be flabbergasted! He could be considered considerably good looking, with that delicate small face and a pair of beautiful black eyes, but in this instance, the sorrowful expression in his eyes was not fitting for his age. It was a look that no ordinary five years old should be able to emulate.
+
+“It has been five years.. Why did I appear in this world? This world and my original world are drastically different, I’m even unsure of what era of history this place belongs to, the only thing I know is that this continent is called Kyushuu.
+
+“Everyone in my current family has the capability to practice martial arts. Why is it that I am a useless trash that is unable to cultivate?” Qing Shui mumbled. The moment there were any hints of strenuous exercise, he would get exhausted, have to gasp for air, palpitations in his heart and even fall unconscious!
+
+“I was originally playing Western Fantasy [1] with my classmates. How on earth did I suddenly end up in this world!?”
+
+“Qing Shui! Qing Shui!” The voice of a woman sounded. Upon hearing it, Qing Shui gradually recovered from his melancholy and regained the bright-eyed naive look of a 5 year old child.
+
+“Mum, I am here!” After he said that he waved his hands and quickly ran towards a woman who excluded a charm that was distinctively different from any ordinary village women.
+
+“Child, why did you travel so far to play? If you want to go that far in the future, let me accompany you, alright?” Holding his hands, the woman smiled with a tender look in her eyes as she gently berated Qing Shui.
+
+Qing Shui felt warmth in his heart. When he came to this world, he was still a fetus developing inside the woman’s body. Now that five years had passed, Qing Shui was uncertain of the exact reason, but he no longer thought of things as before. He knows that this woman really feels affection for him, other people treats him as trash, but she’s the only one in this world that treats him like a treasure!
+
+Since his birth, Qing Shui had not seen his father. From infancy till now, it had always been this gentle and graceful woman before him that was responsible for his upbringing.
+
+As a result, Qing Shui followed the surname of his mother. His mother is named Qing Yi, belonging to the Qing Clan. The Qing Clan in the Qing village, in this remote region, was considered the absolute authority. The Qing Clan was the most influential family within a 100 li radius because of their connections, as well as their secret family martial arts techniques that were passed down generation after generation. The Qing Clan could be considered as the only family that could rival the top three great families in Hundred Miles City!
+
+As a result, in this remote region, no one could afford to make an enemy out of the Qing Clan. Qing Shui knew all of this because, in these five years, while the other kids in the family practiced martial arts, Qing Shui was the exception. Therefore, he had plenty of free time on his hand and thus, paid more attention to the information flowing around.
+
+Even the commoner kids would practice some form of inferior martial arts. Even in his past life, Qing Shui also had the mentality and wish to become a top-tier expert that possessed heaven shaking and earth shattering strength, able to sweep humanity off its feet.
+
+The chance had finally come, he was reincarnated into a different world. However, he turned out to be a trash that could not cultivate! As he thought of this, he covertly glanced at the beautiful lady by his side. Qing Yi was also gazing at Qing Shui compassionately but there were hints of doting, hope, and a sense of unfairness for Qing Shui in her eyes…
+
+As he glanced at the hope in her eyes, Qing Shui lowered his head. He was afraid that Qing Yi would be disappointed. All parents in this world would want their child to achieve something outstanding in life, it goes without saying, no parents would ever want their child to be a trash! However, looking at the current circumstances, Qing Shui was afraid that he would have no choice but to disappoint his mother.
+
+In the last five years, the one that fed and clothed him was this woman. This woman whom which he calls mother, Qing Shui was very afraid that she would one day leave his side.
+
+“Qing Shui, are you hungry? Even if you go out to play, you still have to remember to eat your meals!” This woman had always been intellectual and caring, possessing a demeanor akin to an angel. This made Qing Shui feel that his mother was not ordinary, initially, he thought that people respected her because she is the daughter of the Qing Clan’s grandmaster, but it seems that this was not the case.
+
+“Mother, am I useless? Other children can practice martial arts, but I am unable to.. Will you eventually become the same as them and think of me as trash?” Qing Shui whispered, his expression somewhat holding back tears.
+
+Qing Yi felt her heart shuddered with pain, the weight of her hope was pinned onto this child’s shoulder. However, this child was unable to cultivate, her hope was destined to be extinguished. One cannot have everything they want in life. Forget about Qing Shui accomplishing anything outstanding, as long as he can live a carefree and happy life, she would be extremely satisfied!
+
+“Shui’er, no matter what, you will always be close to my heart. No matter what, I will always love you, you will always be my pride and joy, in my heart, you will always be the most excellent and outstanding person, only when you are happy Will I be happy!” Qing Yi chastely kissed his cheeks.
+
+Such heartwarming and affectionate actions were quite common between them, Qing Shui was quite used to it. He felt extremely blessed, no matter what, there is still someone who love him. With regards to those who calls him trash or looks down on him with contempt, what does that matter? He just could not help but feel sorry that he had not met Qing Yi’s expectations.
+
+Qing Clan was located at the most northern site of the Qing Village. Over there, everywhere within a radius of about 10 Li [3] was all populated by the Qing Clan main and branch families. Currently, the clan master of the Qing Clan, Qing Luo was already a hundred years old, but due to him being at the peak of Houtian Stage, he still looked like a middle aged man. Humans at the peak of Houtian Stage had a life expectancy of two hundred years, as compared to normal humans who only had a life expectancy of a hundred and thirty years.
+
+Qing Yi is the youngest daughter of the Qing Clan’s clan master. The clan master had a total of four sons and a single daughter. Qing Yi was the only daughter, not only that, she was also the youngest child. Needless to say, she was the apple of his eyes. The Qing Clan, currently collectively had about twenty plus grandchildren, one could say that Qing Luo was very contented. He would always smile genuinely from his heart even when he interacted with Qing Shui. There were countless talented geniuses within the two later generations, so even if there was an addition of one more genius or one more trash, it didn’t really matter much in his eyes. Furthermore, Qing Shui was the son of his precious daughter Qing Yi, even if he could not cultivate, as long as he could peacefully live out his life, Qing Yi would also feel reassured. And as such, Qing Luo was very protective of Qing Shui.
+
+Located within the Qing Clan, there was an enormous courtyard. This courtyard an extremely important place in the Qing Clan. As both Qing Yi and Qing Shui entered, they could see the grandsons and granddaughters of the Qing clan boisterously practice their martial arts, every one of them was akin to a ferocious tiger cub!
+
+Qing Yi could see the sadness in Qing Shui’s eyes so she silently sighed. This child at such a young age had such an unyielding personality that seeks strength, it may be a curse instead of a blessing..
+
+She gently guided Qing Shui into her embrace, unwilling to let him see the children that were currently practicing martial arts!
+
+But all her actions were futile\xa0because, at this moment, sounds of ridicule and contemptible laughter targeted at Qing Shui rang out. This sensation was even worst than being directly called trash!
+
+[1] a video game in Qing Shui’s previous world.
+
+[2] Shui`er (adding a er behind a person’s name makes it more endearing, it is usually between parent and child or between lovers)
+
+[3] a metric system used by chinese to measure distance
+
+TL: Bluefire
+
+Editor: Ziltch
+""".replace('\n', ''),
+                         chapter.content.text)
+
+    def test_parsing_chapter_101(self):
+        api = WuxiaWorldApi(self.proxy)
+        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101')
+        self.assertIsNotNone(chapter)
+        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertFalse(chapter.success)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
+        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101',
+                         chapter.get_url())
+        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+        self.assertEqual("Chapter 101 - A Quiet Beauty", chapter.title)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-101', chapter.path)
+        self.assertEqual('lordbluefire_98448380', chapter.translator)
+        self.assertEqual(14974, chapter.id)
+        self.assertFalse(chapter.is_teaser)
+        self.assertTrue(chapter.karma_locked)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-100', chapter.previous_chapter_path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-102', chapter.next_chapter_path)
+
+
 class WuxiaWorldApiSearchTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

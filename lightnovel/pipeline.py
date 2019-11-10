@@ -31,19 +31,20 @@ class Parser(Pipeline):
 
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         for book, chapter in gen:
+            chapter.book = book
             if not chapter.parse():
                 self.log.warning(f"Failed parsing chapter {chapter}")
                 return
             else:
                 if chapter.is_complete():
-                    self.log.info(f"Got chapter {chapter}")
+                    self.log.info(f"Got chapter {chapter} ({chapter.get_url(chapter.path)})")
                     del chapter.document
-                    chapter.book = book
                     book.chapters.append(chapter)
                     yield book, chapter
                 else:
-                    self.log.info("Chapter not released yet.")
+                    self.log.warning("Chapter not complete.")
                     self.proxy.delete_from_cache()
+                    return
 
 
 class HtmlCleaner(Pipeline):
