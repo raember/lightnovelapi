@@ -18,7 +18,7 @@ class Proxy:
     last_request_time: datetime
     last_url = ''
     last_kwargs = {}
-    EXTENSIONS = ['.html', '.jpg', '.jpeg', '.png', '.css', '.json', '.js']
+    EXTENSIONS = ['.html', '.jpg', '.jpeg', '.png', '.json']
 
     def __init__(self, path: str = '.cache', delay=1.0):
         self.log = logging.getLogger(self.__class__.__name__)
