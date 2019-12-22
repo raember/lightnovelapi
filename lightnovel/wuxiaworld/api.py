@@ -1,7 +1,8 @@
 import html
 import json
 from datetime import datetime
-from typing import List
+from enum import Enum
+from typing import List, Tuple
 
 # noinspection PyProtectedMember
 from bs4 import BeautifulSoup, Tag, NavigableString
@@ -25,18 +26,84 @@ class WuxiaWorldBook(WuxiaWorld, Book):
     chapters: List['WuxiaWorldChapter'] = []
 
 
+class Status(Enum):
+    ANY = None
+    ONGOING = True
+    COMPLETED = False
+
+    @classmethod
+    def from_int(cls, status: int):
+        if status == 1:
+            return cls.ONGOING
+        elif status == 2:
+            return cls.COMPLETED
+        return cls.ANY
+
+
+class NovelTag(Enum):
+    CHINESE = 'Chinese'
+    COMPLETED = 'Completed'
+    COMPLETED_RECS = 'Completed Recs'
+    KOREAN = 'Korean'
+    ONGOING = 'Ongoing'
+    ORIGINAL = 'Original'
+
+    @classmethod
+    def from_str(cls, tag: str):
+        for member in cls:
+            if tag == member.value:
+                return member
+
+
+class Genre(Enum):
+    ACTION = 'Action'
+    ALCHEMY = 'Alchemy'
+    COMEDY = 'Comedy'
+    COOKING = 'Cooking'
+    CRAFTING = 'Crafting'
+    FANTASY = 'Fantasy'
+    KINGDOM_BUILDING = 'Kingdom Building'
+    MATURE = 'Mature'
+    MODERN_SETTING = 'Modern Setting'
+    MYSTERY = 'Mystery'
+    POLITICAL_INTRIGUE = 'Political Intrigue'
+    POST_APOCALYPTIC = 'Post-apocalyptic'
+    ROMANCE = 'Romance'
+    SUPERPOWERS = 'Superpowers'
+    TRAGEDY = 'Tragedy'
+    VIRTUAL_REALITY = 'Virtual Reality'
+    WUXIA = 'Wuxia'
+    XIANXIA = 'Xianxia'
+    XUANHUAN = 'Xuanhuan'
+
+    @classmethod
+    def from_str(cls, tag: str):
+        for member in cls:
+            if tag == member.value:
+                return member
+
+
+class SortType(Enum):
+    NAME = 'Name'
+    POPULAR = 'Popular'
+    CHAPTERS = 'Chapters'
+    NEW = 'New'
+
+
 class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
     id: int
     name: str
     slug: str
     cover_url: str
     abbreviation: str
-    synopsis: str
+    synopsis: Tag
     language: str
     time_created: datetime
-    status: int
+    sneakPeek: bool
+    status: Status
     chapter_count: int
-    tags: List[str]
+    tags: List[NovelTag]
+    genres: List[Genre]
 
     def __init__(self, json_data: dict):
         super().__init__()
@@ -45,14 +112,20 @@ class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
         self.slug = json_data['slug']
         self.cover_url = json_data['coverUrl']
         self.abbreviation = json_data['abbreviation']
-        self.synopsis = json_data['synopsis']
+        self.synopsis = BeautifulSoup(json_data['synopsis'], features="html5lib")
         self.language = json_data['language']
         self.time_created = datetime.utcfromtimestamp(float(json_data['timeCreated']))
-        self.status = int(json_data['status'])
+        self.sneakPeek = bool(json_data['sneakPeek'])
+        self.status = Status.from_int(json_data['status'])
         self.chapter_count = int(json_data['chapterCount'])
-        self.tags = list(json_data['tags'])
+        self.tags = list(map(lambda tag: NovelTag.from_str(tag), json_data['tags']))
+        self.genres = list(map(lambda genre: Genre.from_str(genre), json_data['genres']))
+
         self.title = self.name
-        self.path = f"novel/{self.slug}"
+        if self.sneakPeek:
+            self.path = f"preview/{self.slug}"
+        else:
+            self.path = f"novel/{self.slug}"
 
 
 class WuxiaWorldNovel(WuxiaWorld, Novel):
@@ -226,6 +299,8 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
 
 
 class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
+    token: str = ''
+
     def get_novel(self, url: str) -> WuxiaWorldNovel:
         return WuxiaWorldNovel(self._get_document(url))
 
@@ -251,3 +326,105 @@ class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
         for item in data['items']:
             entries.append(WuxiaWorldSearchEntry(item))
         return entries
+
+    def search2(self,
+                title: str = '',
+                tags: Tuple[NovelTag] = (),
+                genres: Tuple[Genre] = (),
+                status: Status = Status.ANY,
+                sort_by: SortType = SortType.NAME,
+                sort_asc: bool = True,
+                search_after: int = None,
+                count: int = 15) -> Tuple[List[WuxiaWorldSearchEntry], int]:
+        """Searches for novels matching certain criteria.
+
+        :param title: The title or abbreviation to search for.
+        :param tags: The tags(:class:`NovelTag`) which the novels must have.
+        :param genres: The genres(:class:`Genre`) which the novels must have.
+        :param status: The :class:`Status` of the novel.
+        :param sort_by: What criteria to sort by.
+        :param sort_asc: Whether to sort in an ascending order or not.
+        :param search_after: The index after which to return the list. Useful if the first request did not return all matches.
+        :param count: How many matches to maximally include in the returned list.
+        :return: A list of matched novels (:class:`WuxiaWorldSearchEntry`) and the amount of total novels that matched the search criteria.
+        """
+        post_data = json.dumps({
+            "title": title,
+            "tags": list(map(lambda tag: tag.value, tags)),
+            "genres": list(map(lambda genre: genre.value, genres)),
+            "active": status.value,
+            "sortType": sort_by.value,
+            "sortAsc": sort_asc,
+            "searchAfter": search_after,
+            "count": count
+        })
+        data = self._post(
+            "https://www.wuxiaworld.com/api/novels/search",
+            use_cache=False,
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json;charset=UTF-8'
+            },
+            data=post_data
+        ).json()
+        assert data['result']
+        entries = []
+        for item in data['items']:
+            entries.append(WuxiaWorldSearchEntry(item))
+        return entries, int(data['total'])
+
+    def login(self, email: str, password: str, remember: bool = False) -> bool:
+        """Logs a user in to use during the api use.
+        Cam be used to earn daily karma or spend said karma on chapters.
+
+        :param email: The email to log in with.
+        :param password: The password for the account.
+        :return: True if the login succeeded, otherwise False.
+        """
+        login_page = self._get_document("https://www.wuxiaworld.com/account/login", use_cache=False)
+        login_form = login_page.select_one("form.form-wrap")
+        self.token: str = login_form.select_one('input[name="__RequestVerificationToken"]')['value']
+        data = {
+            "Form data": {
+                "Email": email,
+                "Password": password,
+                "RememberMe": "true" if remember else "false",
+                "__RequestVerificationToken": self.token
+            }
+        }
+        resp = self._post('https://www.wuxiaworld.com/account/login', data=data)
+        headers = resp.headers
+        cookies = resp.cookies
+        return 200 <= resp.status_code < 300
+
+    def logout(self) -> bool:
+        """Logs a user out.
+
+        :return: True if the logout succeeded, otherwise False.
+        """
+        return 200 <= self._post('https://www.wuxiaworld.com/account/logout').status_code < 300
+
+    def get_karma(self) -> Tuple[int, int]:
+        """Updates the karma statistics of the logged in user.
+
+        :return: A tuple of the karma (normal and gold karma)
+        """
+        karma_page = self._get_document("https://www.wuxiaworld.com/profile/karma", use_cache=False)
+        karma_table: Tag = karma_page.select_one("table.table.table-bordered.table-text-center tbody")
+        karma_table_rows: Tag = karma_table.select("tr")
+        regular_karma = self._get_karma_from_table_row(karma_table_rows[0])
+        gold_karma = self._get_karma_from_table_row(karma_table_rows[1])
+        return regular_karma, gold_karma
+
+    def _get_karma_from_table_row(self, row: Tag) -> int:
+        return int(row.select("td")[1].text)
+
+    def claim_daily_karma(self) -> bool:
+        data = {
+            "Form data": {
+                "Type": "Login",
+                "__RequestVerificationToken": self.token
+            }
+        }
+        resp = self._post('https://www.wuxiaworld.com/profile/missions', data=data)
+        return 200 <= resp.status_code < 300

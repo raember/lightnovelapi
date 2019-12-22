@@ -105,6 +105,8 @@ class Output(Pipeline, ABC):
 
     def __init__(self, novel: Novel, ext: str, out_path: str = 'out'):
         super().__init__()
+        if not novel.success:
+            self.log.warning("Novel wasn't parsed successfully.")
         self.novel = novel
         self.ext = ext
         self.out_path = out_path

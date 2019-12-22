@@ -194,12 +194,21 @@ class LightNovelApi(LightNovelEntity, ABC):
 
     def _get(self, url: str, **kwargs: Any) -> requests.Response:
         """
-        Downloads data from a given url.
-        :param url: The url where the document is located at.
+        Sends a GET request to a given url.
+        :param url: The url endpoint.
         :param kwargs: Additional args to convey to the requests library.
         :return: The Response.
         """
         return self.proxy.request('GET', url, **kwargs)
+
+    def _post(self, url: str, **kwargs: Any) -> requests.Response:
+        """
+        Sends a POST request to a given url.
+        :param url: The url endpoint.
+        :param kwargs: Additional args to convey to the requests library.
+        :return: The Response.
+        """
+        return self.proxy.request('POST', url, **kwargs)
 
     def _get_document(self, url: str, **kwargs: Any) -> BeautifulSoup:
         """
