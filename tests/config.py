@@ -1,5 +1,5 @@
-data_folder = 'data'
-cache_folder = '../.cache'
+data_folder = 'test_data'
+cache_folder = 'tests/.cache'
 
 
 class Har:
