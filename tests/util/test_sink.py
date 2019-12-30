@@ -2,8 +2,8 @@ import os
 import unittest
 
 import lightnovel.util as util
-from lightnovel.test.test_config import Har
 from lightnovel.wuxiaworld import WuxiaWorldApi
+from tests.config import Har
 from util import HarProxy
 
 

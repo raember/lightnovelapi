@@ -1,9 +1,9 @@
 import os
 import unittest
 
-from lightnovel.test.test_config import Har
 from lightnovel.wuxiaworld import WuxiaWorldApi
 from pipeline import ChapterConflation
+from tests.config import Har
 from util import HarProxy
 
 
