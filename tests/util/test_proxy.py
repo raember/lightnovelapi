@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 from urllib3.util import Url
 
-from test.test_config import cache_folder, Har
+from tests.config import cache_folder, Har
 from util import Proxy, DirectProxy, HarProxy
 from util.proxy import ResponseMock
 

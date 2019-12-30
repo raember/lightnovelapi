@@ -6,7 +6,7 @@
         <entryData>
           <resourceRoots>
             <path value="file://$PROJECT_DIR$/lightnovel/test/data" />
-            <path value="file://$PROJECT_DIR$/lightnovel/.cache" />
+            <path value="file://$PROJECT_DIR$/tests/.cache" />
             <path value="file://$PROJECT_DIR$/lightnovel/out" />
           </resourceRoots>
         </entryData>

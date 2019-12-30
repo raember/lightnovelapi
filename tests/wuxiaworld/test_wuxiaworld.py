@@ -2,8 +2,8 @@ import os
 import unittest
 from datetime import datetime, timezone
 
-from lightnovel.test.test_config import Har
 from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
+from tests.config import Har
 from util import HarProxy
 
 
