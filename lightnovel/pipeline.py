@@ -5,13 +5,12 @@ from abc import ABC
 from typing import Generator
 from typing import Tuple
 
+from api import Book, Chapter, Novel
 from epub import EpubFile, BookFile, ChapterFile
-from lightnovel import Book
-from lightnovel import Chapter, Novel
-from util import slugify, make_sure_dir_exists, Proxy
-
-
+from util import slugify, make_sure_dir_exists
 # noinspection PyProtectedMember
+from webot import Browser
+from webot.adapter import CacheAdapter
 
 
 class Pipeline(ABC):
@@ -25,25 +24,26 @@ class Pipeline(ABC):
 
 
 class Parser(Pipeline):
-    def __init__(self, proxy: Proxy):
+    def __init__(self, browser: Browser):
         super().__init__()
-        self.proxy = proxy
+        self._adapter = browser.session.get_adapter('https://')
 
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         for book, chapter in gen:
-            chapter.book = book
+            chapter._book = book
             if not chapter.parse():
                 self.log.warning(f"Failed parsing chapter {chapter}")
                 return
             else:
                 if chapter.is_complete():
-                    self.log.info(f"Got chapter {chapter} ({chapter.get_url(chapter.path)})")
+                    self.log.info(f"Got chapter {chapter} ({chapter.url})")
                     del chapter.document
                     book.chapters.append(chapter)
                     yield book, chapter
                 else:
                     self.log.warning("Chapter not complete.")
-                    self.proxy.delete_from_cache()
+                    if isinstance(self._adapter, CacheAdapter):
+                        self._adapter.delete_last()
                     return
 
 
@@ -69,7 +69,7 @@ class ChapterConflation(Pipeline):
                     yield last_book, last_chap
                 last_book = book
                 last_chap = chapter
-                last_chap.number = 1
+                last_chap._index = 1
                 continue
 
             if self.can_be_conflated(last_chap, chapter):
@@ -79,15 +79,15 @@ class ChapterConflation(Pipeline):
                 self.log.debug(f"Cannot conflate the old chapter ({last_chap}) with chapter {chapter}")
                 yield book, last_chap
                 last_chap = chapter
-                last_chap.number += 1
+                last_chap.index += 1
         self.log.debug("Source generator finished. Yielding last chapter")
         yield last_book, last_chap
 
     @staticmethod
     def can_be_conflated(first: Chapter, second: Chapter) -> bool:
         pattern = re.compile(r'[\w\d]+')
-        owns = pattern.findall(first.get_title())
-        others = pattern.findall(second.get_title())
+        owns = pattern.findall(first.extract_clean_title())
+        others = pattern.findall(second.extract_clean_title())
         for own, other in zip(owns, others):
             if own != other:
                 return False
@@ -95,7 +95,7 @@ class ChapterConflation(Pipeline):
 
     @staticmethod
     def conflate(first: Chapter, second: Chapter):
-        first.next_chapter_path = second.next_chapter_path
+        first._next_chapter_path = second.next_chapter.path
         first.content.append(second.content)
         # Delete the second chapter from the list of chapters from the book
         DeleteChapters.delete_chapter(second)
@@ -112,7 +112,7 @@ class Output(Pipeline, ABC):
         self.out_path = out_path
         self.slug_title = slugify(novel.title, lowercase=False)
         self.filename = f"{self.slug_title}.{self.ext}"
-        self.path = os.path.join(out_path, self.novel.name, self.slug_title, ext)
+        self.path = os.path.join(out_path, self.novel.hoster, self.slug_title, ext)
         make_sure_dir_exists(self.path)
 
     def join_to_path(self, *paths: str) -> str:
@@ -134,10 +134,10 @@ class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         unique_id = slugify(self.novel.title)
         filepath = self.join_to_path(self.filename)
-        with EpubFile(filepath, unique_id, self.novel.title, self.novel.language, identifier=self.novel.get_url(),
-                      rights=self.novel.rights, publisher=self.novel.name,
-                      subject=' / '.join(['Web Novel', *self.novel.tags]), date=self.novel.date,
-                      description=self.novel.description.text, creator=self.novel.author, cover_image=self.novel.image,
+        with EpubFile(filepath, unique_id, self.novel.title, self.novel.language, identifier=str(self.novel.url),
+                      rights=self.novel.rights, publisher=self.novel.hoster,
+                      subject=' / '.join(['Web Novel', *self.novel.tags]), date=self.novel.release_date,
+                      description=self.novel.description.text, creator=self.novel.author, cover_image=self.novel.cover,
                       mode='w') as epub:
             self.log.debug(f"Opened file '{filepath}'")
             last_book = None

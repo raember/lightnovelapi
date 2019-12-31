@@ -5,9 +5,9 @@
       <entry url="file://$PROJECT_DIR$">
         <entryData>
           <resourceRoots>
-            <path value="file://$PROJECT_DIR$/lightnovel/test/data" />
             <path value="file://$PROJECT_DIR$/tests/.cache" />
-            <path value="file://$PROJECT_DIR$/lightnovel/out" />
+            <path value="file://$PROJECT_DIR$/test_data" />
+            <path value="file://$PROJECT_DIR$/tests" />
           </resourceRoots>
         </entryData>
       </entry>

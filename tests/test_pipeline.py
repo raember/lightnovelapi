@@ -1,28 +1,37 @@
-import os
 import unittest
+
+from urllib3.util import parse_url
 
 from lightnovel.wuxiaworld import WuxiaWorldApi
 from pipeline import ChapterConflation
-from tests.config import Har
-from util import HarProxy
+from tests.config import Har, resolve_path
+from webot import Firefox
+from webot.adapter import HarAdapter, load_har
 
 
 class WuxiaWorldApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_HJC_COVER_C1_2))
+        cls.browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_HJC_COVER_C1_2)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        cls.browser.session.mount('https://', har_adapter)
+        cls.browser.session.mount('http://', har_adapter)
 
     def test_conflation_chapter_1_2(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
-        chapter1 = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
+        chapter1 = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01'))
         chapter1.parse()
-        chapter1.book = novel.books[0]
+        chapter1._book = novel.books[0]
         chapter1.book.chapters.append(chapter1)
-        chapter2 = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
+        chapter2 = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02'))
         chapter2.parse()
-        chapter2.book = novel.books[0]
+        chapter2._book = novel.books[0]
         chapter2.book.chapters.append(chapter2)
 
         chapter1.clean_content()

@@ -1,7 +1,8 @@
 import logging
 
 from pipeline import EpubMaker, Parser, DeleteChapters
-from util import Proxy
+from webot import Firefox
+from webot.adapter import CacheAdapter
 from wuxiaworld import WuxiaWorldApi
 
 logging.basicConfig(
@@ -10,6 +11,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger('chardet.charsetprober').setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
 
 # Set it
@@ -29,15 +31,24 @@ log = logging.getLogger(__name__)
 # URL = 'https://www.wuxiaworld.com/novel/renegade-immortal'
 
 # Make it
-proxy = Proxy()
-api = WuxiaWorldApi(proxy)
-lst, _ = api.search2(count=200)
-# print(api.login('', ''))
-# print(api.get_karma())
-# print(api.claim_daily_karma())
-# print(api.get_karma())
-# print(api.logout())
-# exit(0)
+browser = Firefox()
+browser._accept_encoding = ['deflate', 'gzip']  # brotli (br) is cumbersome
+cache = CacheAdapter()
+browser.session.mount('https://', cache)
+browser.session.mount('http://', cache)
+api = WuxiaWorldApi(browser)
+
+# print(f"Login successful: {api.login('', '')}")  # Hey there, clearnet!
+# karma_normal, karma_golden = api.get_karma()
+# print(f"Karma: {karma_normal} normal, {karma_golden} golden")
+# print(f"Claiming karma successful: {api.claim_daily_karma()}")  # Idk why it doesn't claim them. It doesn't work. Maybe better like this tbh
+# karma_normal, karma_golden = api.get_karma()
+# print(f"Karma: {karma_normal} normal, {karma_golden} golden")
+# print(f"Logout successful: {api.logout()}")
+
+lst, n = api.search(count=200)
+if n > len(lst):
+    print(f"Not all matches returned. {n} Matches search, but only {len(lst)} got returned.")
 # URLS = [
 #     # 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world',
 #     # 'https://www.wuxiaworld.com/novel/heavenly-jewel-change',
@@ -57,7 +68,7 @@ lst, _ = api.search2(count=200)
 #     'https://www.wuxiaworld.com/novel/the-unrivaled-tang-sect'
 # ]
 newly_fetched = {}
-urls = list(map(lambda i: i.get_url(), lst))
+urls = list(map(lambda i: i.alter_url(), lst))
 for url in urls:
     # Rip,
     novel, gen = api.get_entire_novel(url)
@@ -67,13 +78,13 @@ for url in urls:
     newly_fetched[novel.title] = 0
 
     # Export it
-    gen = Parser(api.proxy).wrap(gen)
+    gen = Parser(api.browser).wrap(gen)
     # gen = HtmlCleaner().wrap(gen)
     # gen = ChapterConflation(novel).wrap(gen)
     gen = EpubMaker(novel).wrap(gen)
     gen = DeleteChapters().wrap(gen)
     for _ in gen:
-        if not proxy.hit:
+        if not cache.hit:
             newly_fetched[novel.title] += 1
 
 print("New chapters:")

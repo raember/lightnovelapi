@@ -3,234 +3,401 @@ import os
 import re
 import shutil
 import time
-import urllib.parse
 from abc import ABC
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
-from typing import List, Any, Tuple, Generator
+from typing import List, Any, Tuple, Generator, Optional
 
-import requests
 from PIL import Image
 from bs4 import Tag, BeautifulSoup
-from urllib3.util import parse_url
+from urllib3.util import parse_url, Url
 
-import lightnovel.util.proxy as proxyutil
-import lightnovel.util.text as textutil
+from util.text import slugify
+from webot import Browser, Firefox
+from webot.adapter import CacheAdapter
 
 
 class LightNovelEntity:
-    host = ''
-    path = ''
+    """An entity that is identified by a url"""
+    _url: Url
 
-    def __init__(self):
+    def __init__(self, url: Url):
         self.log = logging.getLogger(self.__class__.__name__)
+        self._url = url
 
-    def get_url(self, path: str = None):
-        if path is not None:
-            return urllib.parse.urljoin(self.host, path)
-        else:
-            return urllib.parse.urljoin(self.host, self.path)
+    @property
+    def url(self) -> Url:
+        """The url that identifies this object"""
+        return self._url
+
+    def alter_url(self, path: str = None) -> Url:
+        """Returns a url which uses this object's identifying url as basis and alters it if needed.
+
+        :param path: An alternative path for the url. Defaults to this object's identifying path.
+        :rtype: Url
+        :returns: A new url with a possibly altered path
+        """
+        if path is None:
+            path = self._url.path
+        return Url(self._url.scheme, host=self._url.hostname, port=self._url.port, path=path)
+
+    def __str__(self):
+        return str(self._url)
 
 
 class LightNovelPage(LightNovelEntity):
-    title = ''
-    path = ''
-    document = None
-    success = False
-    name = 'generic'
-    language = 'en'
+    """A html document of a light novel page"""
+    _document: BeautifulSoup
+    _success: bool
+    _hoster: str = ''
+    _title: str = ''
+    _language: str = ''
+    _author: str = ''
+    _translator: str = ''
 
-    def __init__(self, document: BeautifulSoup):
-        super().__init__()
-        self.document = document
+    def __init__(self, url: Url, document: BeautifulSoup):
+        super().__init__(url)
+        self._document = document
+        self._success = False
 
-    def parse(self, document: BeautifulSoup = None) -> bool:
-        if not document:
-            document = self.document
-        try:
-            self.success = self._parse(document)
-        except Exception as e:
-            self.log.error(e)
-            self.success = False
-        finally:
-            return self.success
+    @property
+    def document(self) -> BeautifulSoup:
+        return self._document
 
-    def _parse(self, document: BeautifulSoup) -> bool:
+    @document.setter
+    def document(self, value: BeautifulSoup):
+        self._document = value
+
+    @document.deleter
+    def document(self):
+        del self._document
+
+    @property
+    def success(self) -> bool:
+        return self._success
+
+    @property
+    def hoster(self) -> Optional[str]:
+        return self._hoster if self._hoster else None
+
+    @property
+    def title(self) -> Optional[str]:
+        return self._title if self._title else None
+
+    @property
+    def language(self) -> Optional[str]:
+        return self._language if self._language else None
+
+    @property
+    def author(self) -> Optional[str]:
+        return self._author if self._author else None
+
+    @property
+    def translator(self) -> Optional[str]:
+        return self._translator if self._translator else None
+
+    def parse(self) -> bool:
         raise NotImplementedError('Must be overwritten')
 
     def __str__(self):
         return self.title
 
 
+class Novel(LightNovelPage, ABC):
+    _description: Tag = None
+    _rights: str = ''
+    _tags: List[str] = []
+    _books: List['Book'] = []
+    _first_chapter_path: str = ''
+    _cover_url: str = ''
+    _cover: Image.Image = None
+    _release_date: datetime = None
+
+    @property
+    def description(self) -> Optional[Tag]:
+        return self._description if self._description else None
+
+    @property
+    def rights(self) -> Optional[str]:
+        return self._rights if self._rights else None
+
+    @property
+    def tags(self) -> Optional[List[str]]:
+        return self._tags if self._tags else None
+
+    @property
+    def books(self) -> Optional[List['Book']]:
+        return self._books if self._books else None
+
+    @property
+    def first_chapter(self) -> Optional[Url]:
+        return self.alter_url(self._first_chapter_path) if self._first_chapter_path else None
+
+    @property
+    def cover_url(self) -> Optional[Url]:
+        return parse_url(self._cover_url) if self._cover_url else None
+
+    @property
+    def cover(self) -> Optional[Image.Image]:
+        return self._cover if self._cover else None
+
+    @cover.setter
+    def cover(self, value: Image.Image):
+        self._cover = value
+
+    @property
+    def release_date(self) -> Optional[datetime]:
+        return self._release_date if self._release_date else None
+
+    def enumerate_chapter_entries(self) -> Generator[Tuple['Book', 'ChapterEntry'], None, None]:
+        """Enumerates all the parsed books and their chapter entries and assigns them their index."""
+        book_n = 0
+        chapter_abs_n = 0
+        for book in self.books:
+            book_n += 1
+            chapter_abs_n += 1
+            book.number = book_n
+            chapter_n = 0
+            for chapter_entry in book.chapter_entries:
+                chapter_n += 1
+                chapter_entry.index = chapter_n
+                chapter_entry.abs_index = chapter_abs_n
+                self.log.debug(f"Getting chapter entry {book_n}.{chapter_n}({chapter_abs_n}) '{chapter_entry.title}'")
+                yield book, chapter_entry
+
+    def __str__(self):
+        if self._author:
+            return f"'{self._title}' by {self._author} ({len(self._books)} books)"
+        return f"'{self._title}' ({len(self._books)} books)"
+
+
+class Book:
+    _title: str = ''
+    _chapter_entries: List['ChapterEntry'] = []
+    _chapters: List['Chapter'] = []
+    _novel: 'Novel' = None
+    _index: int = 0
+
+    def __init__(self, title: str):
+        self._title = title
+        self._chapter_entries = []
+        self._chapters = []
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def chapter_entries(self) -> List['ChapterEntry']:
+        return self._chapter_entries
+
+    @property
+    def chapters(self) -> List['Chapter']:
+        return self._chapters
+
+    @property
+    def novel(self) -> 'Novel':
+        return self._novel
+
+    @novel.setter
+    def novel(self, value: 'Novel'):
+        self._novel = value
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @index.setter
+    def index(self, value: int):
+        self._index = value
+
+    def __copy__(self) -> 'Book':
+        book = type(self)(self._title)
+        book._chapter_entries = self._chapter_entries.copy()
+        book._chapters = self._chapters.copy()
+        book._novel = self._novel
+        book._index = self._index
+        return book
+
+    def __str__(self):
+        return f"{self._index} {self._title} ({len(self.chapter_entries)} entries, {len(self.chapters)} chapters)"
+
+
+class ChapterEntry(LightNovelEntity):
+    _title: str = ''
+    _index: int = 0
+    _abs_index: int = 0
+
+    def __init__(self, url: Url, title: str):
+        super(ChapterEntry, self).__init__(url)
+        self._title = title
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @index.setter
+    def index(self, value: int):
+        self._index = value
+
+    @property
+    def abs_index(self) -> int:
+        return self._abs_index
+
+    @abs_index.setter
+    def abs_index(self, value: int):
+        self._abs_index = value
+
+    def __str__(self):
+        return self._title
+
+
 class Chapter(LightNovelPage, ABC):
-    translator = ''
-    previous_chapter_path = ''
-    next_chapter_path = ''
-    content: Tag = None
-    book: 'Book' = None
-    number = 0
-    REGEX_CHAPTER_NUMBER = re.compile(r'^chapter\s+[(\[]?\s*(\d+)\s*[)\]\-:]*\s*', re.IGNORECASE)
-    REGEX_CHAPTER_SUB_NUMBER = re.compile(r'[(\[]?(\d+)[)\]]?$')
+    _previous_chapter_path: str
+    _next_chapter_path: str
+    _content: Tag = None
+    _book: Book = None
+    _index: int = 0
 
-    def get_number(self):
-        match = self.REGEX_CHAPTER_NUMBER.search(self.title)
-        if match is not None:
-            return int(match.group(1))
-        return -1
+    @property
+    def content(self) -> Optional[Tag]:
+        if not self._content:
+            self.log.warning("Content not parsed yet.")
+            return None
+        return self._content
 
-    def get_sub_number(self):
-        match = self.REGEX_CHAPTER_SUB_NUMBER.search(self.title)
-        if match is not None:
-            return int(match.group(1))
-        return -1
+    @property
+    def index(self) -> int:
+        return self._index
 
-    def get_title(self):
-        title: str = self.title.strip()
-        match = self.REGEX_CHAPTER_NUMBER.search(title)
+    @index.setter
+    def index(self, value: int):
+        self._index = value
+
+    @property
+    def previous_chapter(self) -> Optional[Url]:
+        return self.alter_url(self._previous_chapter_path) if self._previous_chapter_path else None
+
+    @property
+    def next_chapter(self) -> Optional[Url]:
+        return self.alter_url(self._next_chapter_path) if self._next_chapter_path else None
+
+    @property
+    def book(self) -> Optional[Book]:
+        return self._book if self._book else None
+
+    def extract_clean_title(self) -> str:
+        """Try to get the title as clean as possible"""
+        title = self._title.strip()
+        match = re.compile(r'^chapter\s+[(\[]?\s*(\d+)\s*[)\]\-:]*\s*', re.IGNORECASE).search(title)
         if match is not None:
             title = self._cut_match(match, title)
-        match = self.REGEX_CHAPTER_SUB_NUMBER.search(title)
+        match = re.compile(r'[(\[]?(\d+[A-Z]?)[)\]]?$').search(title)
         if match is not None:
             title = self._cut_match(match, title)
-        return title.strip('–- ')
+        title = title.strip('–- ')
+        return title if len(title) > 3 else self._title.strip()
 
     @staticmethod
     def _cut_match(match, string: str) -> str:
         return string[:match.span(0)[0]] + string[match.span(0)[1]:]
 
     def is_complete(self) -> bool:
+        """Whether the chapter has been completely published or not (partial/restricted access)"""
         raise NotImplementedError
 
     def clean_content(self):
+        """Clean the content of the chapter"""
         raise NotImplementedError
 
     def __del__(self):
-        if self.book is not None:
-            del self.book
-        if self.content is not None:
-            del self.content
+        if self._book is not None:
+            del self._book
+        if self._content is not None:
+            del self._content
 
     def __str__(self):
-        if self.book is None:
-            if self.title == '':
-                return f"?.{self.number}"
-            return f"?.{self.number} {self.get_title()}"
-        return f"{self.book.number}.{self.number} {self.get_title()}"
-
-
-class ChapterEntry(LightNovelEntity):
-    title = ''
-    number = 0
-
-    def __str__(self):
-        return self.title
-
-
-class Book:
-    title = ''
-    chapter_entries: List[ChapterEntry] = []
-    chapters: List[Chapter] = []
-    novel: 'Novel'
-    number = 0
-
-    def __copy__(self) -> 'Book':
-        book = type(self)()
-        book.title = self.title
-        book.chapter_entries = self.chapter_entries.copy()
-        book.chapters = self.chapters.copy()
-        book.novel = self.novel
-        return book
-
-    def __str__(self):
-        return f"{self.number} {self.title} ({len(self.chapters)}/{len(self.chapter_entries)})"
-
-
-class Novel(LightNovelPage, ABC):
-    author = ''
-    translator = ''
-    rights = ''
-    tags: List[str] = []
-    description: Tag = None
-    books: List[Book] = []
-    first_chapter_path = ''
-    img_url = ''
-    image: Image.Image = None
-    date: datetime = datetime.utcfromtimestamp(0)
-
-    def __str__(self):
-        return f"'{self.title}' by {self.translator} ({len(self.books)} books)"
-
-    def gen_entries(self) -> Generator[Tuple[int, int, Book, ChapterEntry], None, None]:
-        b_n = 0
-        for book in self.books:
-            b_n += 1
-            book.number = b_n
-            book.chapters = []
-            c_n = 0
-            for chapter_entry in book.chapter_entries:
-                c_n += 1
-                chapter_entry.number = c_n
-                self.log.debug(f"Getting chapter entry {b_n}.{c_n} '{chapter_entry.title}'")
-                yield book, chapter_entry
+        if self._book is None:
+            if self._title == '':
+                return f"?.{self._index}"
+            return f"?.{self._index} {self.extract_clean_title()}"
+        return f"{self._book.index}.{self._index} {self.extract_clean_title()}"
 
 
 class SearchEntry(LightNovelEntity):
-    title = ''
-
-    def __str__(self):
-        return self.title
+    title: str
 
 
-class LightNovelApi(LightNovelEntity, ABC):
-    proxy: proxyutil.Proxy = None
+class LightNovelApi(ABC):
+    hostname: str
+    _browser: Browser
+    _last_request_timestamp: datetime
+    _request_delay: timedelta
 
-    def __init__(self, proxy: proxyutil.Proxy = proxyutil.DirectProxy):
+    def __init__(self, browser: Browser = Firefox(), delay: timedelta = timedelta(seconds=1.0)):
         """
         Creates a new API for a specific service.
-        :param proxy: The proxy to use when executing http requests.
+        :param browser: The browser to use when executing http requests.
         """
-        super().__init__()
-        self.proxy = proxy
+        self.log = logging.getLogger(self.__class__.__name__)
+        self._browser = browser
+        self._last_request_timestamp = datetime(1, 1, 1)
+        self._request_delay = delay
+        if not isinstance(browser.session.get_adapter('https://'), CacheAdapter):
+            self.log.warning("Not using a CacheAdapter will take a long time for every run.")
 
-    def _get(self, url: str, **kwargs: Any) -> requests.Response:
-        """
-        Sends a GET request to a given url.
-        :param url: The url endpoint.
-        :param kwargs: Additional args to convey to the requests library.
-        :return: The Response.
-        """
-        return self.proxy.request('GET', url, **kwargs)
+    @property
+    def browser(self) -> Browser:
+        return self._browser
 
-    def _post(self, url: str, **kwargs: Any) -> requests.Response:
-        """
-        Sends a POST request to a given url.
-        :param url: The url endpoint.
-        :param kwargs: Additional args to convey to the requests library.
-        :return: The Response.
-        """
-        return self.proxy.request('POST', url, **kwargs)
+    @browser.setter
+    def browser(self, value: Browser):
+        self._browser = value
 
-    def _get_document(self, url: str, **kwargs: Any) -> BeautifulSoup:
+    @property
+    def adapter(self):
+        return self._browser.session.get_adapter('https://')
+
+    @property
+    def last_request_timestamp(self) -> datetime:
+        return self._last_request_timestamp
+
+    @last_request_timestamp.setter
+    def last_request_timestamp(self, value: datetime):
+        self._last_request_timestamp = value
+
+    @property
+    def request_delay(self) -> timedelta:
+        return self._request_delay
+
+    @request_delay.setter
+    def request_delay(self, value: timedelta):
+        self._request_delay = value
+
+    def _get_document(self, url: Url, **kwargs: Any) -> BeautifulSoup:
         """
         Downloads an html document from a given url.
         :param url: The url where the document is located at.
         :param kwargs: Additional args to convey to the requests library.
         :return: An instance of BeautifulSoup which represents the html document.
         """
-        if 'headers' not in kwargs:
-            kwargs['headers'] = {'Accept': 'text/html'}
-        if 'Accept' not in kwargs['headers']:
-            kwargs['headers']['Accept'] = 'text/html'
-        response = self._get(url, **kwargs)
+        self.check_wait_condition()
+        kwargs.setdefault('headers', {}).setdefault('Accept', 'text/html')
+        response = self._browser.navigate(str(url), **kwargs)
+        self._last_request_timestamp = datetime.now()
         return BeautifulSoup(response.text, features="html5lib")
 
-    def get_novel(self, url: str) -> Novel:
+    def get_novel(self, url: Url) -> Novel:
         """
         Downloads the main page of the novel from the given url.
         :param url: The url where the page is located at.
         :return: An instance of a Novel.
         """
-        return Novel(self._get_document(url))
+        return Novel(url, self._get_document(url))
 
     def get_image(self, url: str) -> Image.Image:
         """
@@ -238,17 +405,19 @@ class LightNovelApi(LightNovelEntity, ABC):
         :param url: The url of the image.
         :return: An image object representation.
         """
-        return Image.open(BytesIO(self._get(url).content))
+        response = self._browser.get(str(url))
+        self._last_request_timestamp = datetime.now()
+        return Image.open(BytesIO(response.content))
 
-    def get_chapter(self, url: str) -> Chapter:
+    def get_chapter(self, url: Url) -> Chapter:
         """
         Downloads a chapter from the given url.
         :param url: The url where the chapter is located at.
         :return: An instance of a Chapter.
         """
-        return Chapter(self._get_document(url))
+        return Chapter(url, self._get_document(url))
 
-    def get_entire_novel(self, url: str) -> Tuple[Novel, Generator[Tuple[Book, Chapter], None, None]]:
+    def get_entire_novel(self, url: Url) -> Tuple[Novel, Generator[Tuple[Book, Chapter], None, None]]:
         """
         Downloads the main page of a novel (including its image) and then all its chapters.
         It also links the chapters to the corresponding books and the image with the novel.
@@ -269,8 +438,8 @@ class LightNovelApi(LightNovelEntity, ABC):
                 yield from ()
 
             return novel, empty_gen()
-        self.log.info(f"Downloading novel {novel.title} ({novel.get_url()}).")
-        novel.image = self.get_image(novel.img_url)
+        self.log.info(f"Downloading novel {novel.title} ({novel.url}).")
+        novel.cover = self.get_image(novel.cover_url)
         return novel, self.get_all_chapters(novel)
 
     def get_all_chapters(self, novel: Novel) -> Generator[Tuple[Book, Chapter], None, None]:
@@ -282,39 +451,42 @@ class LightNovelApi(LightNovelEntity, ABC):
         :param novel: The novel from which the chapters should be downloaded. Has to be parsed already.
         :return: A generator that downloads each chapter.
         """
-        c_n = 0
+        chapter_index = 0
         book = None
         chapter = None
-        for book, chapter_entry in novel.gen_entries():
-            c_n = chapter_entry.number
-            chapter = self.get_chapter(self.get_url(chapter_entry.path))
-            chapter.number = c_n
+        for book, chapter_entry in novel.enumerate_chapter_entries():
+            chapter_index = chapter_entry.index
+            chapter = self.get_chapter(chapter_entry.url)
+            chapter.index = chapter_entry.index
             yield book, chapter
-            self.wait()
-        while chapter.success and chapter.next_chapter_path:
-            c_n += 1
-            self.log.debug(f"Following existing next chapter link({chapter.next_chapter_path}).")
-            chapter = self.get_chapter(self.get_url(chapter.next_chapter_path))
-            chapter.number = c_n
+        while chapter.success and chapter.next_chapter:
+            chapter_index += 1
+            self.log.debug(f"Following existing next chapter link({chapter.next_chapter}).")
+            chapter = self.get_chapter(chapter.next_chapter)
+            chapter.index = chapter_index
             yield book, chapter
-            self.wait()
 
-    def wait(self):  # TODO: Prevent scenario: miss -> hit -> no delay -> miss
+    def check_wait_condition(self):
         """
         Waits until the proxy request delay expires.
         The delay will be omitted if the last request was a hit in the cache.
         """
-        if not self.proxy.hit:
-            now = datetime.now()
-            wait_until = self.proxy.last_request_time + self.proxy.delay
-            if now < wait_until:
-                wait_remainder = wait_until - now
-                self.log.debug(f"Wait for {wait_remainder.total_seconds()} seconds")
-                time.sleep(wait_remainder.total_seconds())
-            else:
-                self.log.debug("Delay already expired. No need to wait")
+        adapter = self._browser.session.get_adapter('https://')
+        if isinstance(adapter, CacheAdapter):
+            if adapter.hit:
+                self.log.debug("Hit in cache. No need to wait")
+                return
+        self.await_timeout()
+
+    def await_timeout(self):
+        now = datetime.now()
+        wait_until = self._last_request_timestamp + self._request_delay
+        if now < wait_until:
+            wait_remainder = wait_until - now
+            self.log.debug(f"Waiting for {wait_remainder.total_seconds()} seconds")
+            time.sleep(wait_remainder.total_seconds())
         else:
-            self.log.debug("Hit in cache. No need to wait")
+            self.log.debug("Delay already expired. No need to wait")
 
     def search(self, title: str) -> List[SearchEntry]:
         """
@@ -330,7 +502,7 @@ class LightNovelApi(LightNovelEntity, ABC):
         from util import LatexHtmlSink
         if os.path.isdir(folder):
             shutil.rmtree(folder)
-        novel_title = textutil.slugify(novel.title)
+        novel_title = slugify(novel.title)
         path = os.path.join(folder, novel_title)
         if os.path.isdir(path):
             shutil.rmtree(path)
@@ -341,7 +513,7 @@ class LightNovelApi(LightNovelEntity, ABC):
         converter = LatexHtmlSink()
         for chapter in chapters:
             index += 1
-            chapter_title = textutil.slugify(chapter.title)
+            chapter_title = slugify(chapter.title)
             chapter_filename_no_ext = f"{index}_{chapter_title}"
             chapter_path = os.path.join(path, chapter_filename_no_ext + '.tex')
             chapter_filenames_no_ext.append(chapter_filename_no_ext)
@@ -380,20 +552,19 @@ class LightNovelApi(LightNovelEntity, ABC):
         shutil.copyfile('structure.tex', os.path.join(folder, novel_title, 'structure.tex'))
 
     @staticmethod
-    def get_api(url: str, proxy: proxyutil.Proxy = proxyutil.DirectProxy()) -> 'LightNovelApi':
+    def get_api(url: str, browser: Browser) -> 'LightNovelApi':
         """
         Probes all available api wrappers and returns the first one that matches with the url.
         :param url: The url to be checked for.
-        :param proxy: The proxy to use for the LightNovelApi.
+        :param browser: The browser to use for the LightNovelApi.
         :return: An instance of a LightNovelApi.
         """
         from wuxiaworld import WuxiaWorldApi
         apis = [
-            WuxiaWorldApi(proxy)
+            WuxiaWorldApi(browser)
         ]
         parsed = parse_url(url)
         for api in apis:
-            label = parse_url(api.host)
-            if parsed.host == label.host:
+            if parsed.host == api.hostname:
                 return api
         raise LookupError(f"No api found for url {url}.")
