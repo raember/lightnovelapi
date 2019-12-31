@@ -10,8 +10,7 @@ from PIL.Image import Image
 # noinspection PyProtectedMember
 from bs4 import BeautifulSoup, Tag, PageElement
 
-from lightnovel import Book
-from lightnovel import Chapter
+from api import Book, Chapter
 from util import slugify, sanitize_for_html
 
 
@@ -237,11 +236,11 @@ class ChapterFile(XHtmlFile):
         super().__init__()
         self.chapter = chapter
         book_n = chapter.book.number
-        chapter_n = chapter.number
-        self.sanitized_title = sanitize_for_html(chapter.get_title())
-        self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.get_title())}.xhtml"
+        chapter_n = chapter._index
+        self.sanitized_title = sanitize_for_html(chapter.extract_clean_title())
+        self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.extract_clean_title())}.xhtml"
         self.unique_id = f"chap_{book_n}_{chapter_n}"
-        title = sanitize_for_html(chapter.get_title())
+        title = sanitize_for_html(chapter.extract_clean_title())
         self.content = BeautifulSoup(f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -263,8 +262,8 @@ class BookFile(XHtmlFile):
     def __init__(self, book: Book):
         super().__init__()
         self.book = book
-        self.filepath = f"OEBPS/{book.number}_{slugify(book.title)}.{self.ext}"
-        self.unique_id = f"book_{book.number}"
+        self.filepath = f"OEBPS/{book.index}_{slugify(book.title)}.{self.ext}"
+        self.unique_id = f"book_{book.index}"
         title = sanitize_for_html(book.title)
         self.content = BeautifulSoup(f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">

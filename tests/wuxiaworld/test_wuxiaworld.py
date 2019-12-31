@@ -1,38 +1,46 @@
-import os
 import unittest
 from datetime import datetime, timezone
 
+from urllib3.util import parse_url
+
 from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
-from tests.config import Har
-from util import HarProxy
+from tests.config import Har, resolve_path
+from webot import Firefox
+from webot.adapter import HarAdapter, load_har
+# noinspection SpellCheckingInspection
+from wuxiaworld.api import Genre
 
 
 class WuxiaWorldApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_HJC_COVER_C1_2))
+        cls.browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_HJC_COVER_C1_2)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        cls.browser.session.mount('https://', har_adapter)
+        cls.browser.session.mount('http://', har_adapter)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WuxiaWorldNovel))
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', novel.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
+        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', str(novel.alter_url()))
+        self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
         self.assertEqual('Heavenly Jewel Change', novel.title)
-        self.assertEqual('Stardu5t', novel.author)
+        self.assertIsNone(novel.author)
         self.assertEqual('Stardu5t', novel.translator)
         self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.rights)
-        self.assertEqual(datetime(2015, 11, 7, 4, 3, 42, tzinfo=timezone.utc), novel.date)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', novel.first_chapter_path)
+        self.assertEqual(datetime(2015, 11, 7, 4, 3, 42, tzinfo=timezone.utc), novel.release_date)
+        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', novel.first_chapter.path)
         self.assertListEqual(['Chinese', 'Ongoing'], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/hjc.jpg?ver=f83790a5f2ff64bb6524c2cfd207845ba1d25ac6',
-            novel.img_url)
-        self.assertEqual('/novel/heavenly-jewel-change', novel.path)
+            str(novel.cover_url))
         self.assertEqual("\n[Zen’s Synopsis]In a world where power means everything, "
                          "and the strong trample the weak; there was a boy born from a "
                          "Heavenly Jewel Master. Born in a small country which had to "
@@ -70,7 +78,7 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         self.assertEqual(27, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
         self.assertEqual('Chapter 1 Big Sis, Im afraid this is a misunderstanding! (1)', chapter.title)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.path)
+        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.url.path)
         book = novel.books[1]
         self.assertEqual('Volume 2', book.title)
         self.assertEqual(29, len(book.chapter_entries))
@@ -91,23 +99,23 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         self.assertEqual(697, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy)
-        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01')
+        api = WuxiaWorldApi(self.browser)
+        chapter = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01',
-                         chapter.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+                         str(chapter.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(chapter.alter_url('')))
         self.assertEqual("Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (1)", chapter.title)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.path)
         self.assertEqual('Stardu5t', chapter.translator)
-        self.assertEqual(25687, chapter.id)
+        self.assertEqual(25687, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
-        self.assertEqual('', chapter.previous_chapter_path)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.next_chapter_path)
+        self.assertIsNone(chapter.previous_chapter)
+        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.next_chapter.path)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""
@@ -139,23 +147,23 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
                          chapter.content.text)
 
     def test_parsing_chapter_2(self):
-        api = WuxiaWorldApi(self.proxy)
-        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02')
+        api = WuxiaWorldApi(self.browser)
+        chapter = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02',
-                         chapter.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+                         str(chapter.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(chapter.alter_url('')))
         self.assertEqual("Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (2)", chapter.title)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02', chapter.path)
         self.assertEqual('Stardu5t', chapter.translator)
-        self.assertEqual(25689, chapter.id)
+        self.assertEqual(25689, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.previous_chapter_path)
-        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-03', chapter.next_chapter_path)
+        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.previous_chapter.path)
+        self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-03', chapter.next_chapter.path)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""
@@ -186,33 +194,38 @@ With a cold flash, the tip of the sword was resting on Zhou Weiqing’s throat, 
                          chapter.content.text)
 
 
+# noinspection SpellCheckingInspection
 class WuxiaWorldApiWmwTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_WMW_COVER_C1))
+        cls.browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_WMW_COVER_C1)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        cls.browser.session.mount('https://', har_adapter)
+        cls.browser.session.mount('http://', har_adapter)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world'))
         self.assertIsNotNone(novel)
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
         self.assertTrue(isinstance(novel, WuxiaWorldNovel))
-        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', novel.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
+        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', str(novel.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
         self.assertEqual('Warlock of the Magus World', novel.title)
-        self.assertEqual('OMA', novel.author)
+        self.assertEqual('The Plagiarist', novel.author)
         self.assertEqual('OMA', novel.translator)
         self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.rights)
-        self.assertEqual(datetime(2016, 6, 8, 5, 51, 6, tzinfo=timezone.utc), novel.date)
-        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', novel.first_chapter_path)
-        self.assertListEqual(['Completed', 'Chinese'], novel.tags)
+        self.assertEqual(datetime(2016, 6, 8), novel.release_date)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', novel.first_chapter.path)
+        self.assertListEqual(['Chinese', 'Completed', 'Completed Recs'], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/wmw.jpg?ver=2839cf223fce0da2ff6da6ae32ab0c4e705eee1a',
-            novel.img_url)
-        self.assertEqual('/novel/warlock-of-the-magus-world', novel.path)
+            str(novel.cover_url))
         self.assertEqual('\nWhat happens when a scientist from a futuristic world reincarnates in a World of Magic '
                          'and Knights?An awesome MC — that’s what happens!A scientist’s goal is to explore the '
                          'secrets of the universe, and this is exactly what Leylin sets out to do when he is '
@@ -230,7 +243,7 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
         self.assertEqual(287, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
         self.assertEqual('Chapter 1', chapter.title)
-        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.path)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.url.path)
         book = novel.books[1]
         self.assertEqual('Twilight Zone', book.title)
         self.assertEqual(104, len(book.chapter_entries))
@@ -248,22 +261,24 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
         self.assertEqual(157, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy)
-        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1')
+        api = WuxiaWorldApi(self.browser)
+        chapter = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
-        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1',
+                         str(chapter.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(chapter.alter_url('')))
         self.assertEqual("Chapter 1", chapter.title)
-        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.path)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1', chapter.url.path)
         self.assertEqual('OMA', chapter.translator)
-        self.assertEqual(9107, chapter.id)
+        self.assertEqual(9107, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
-        self.assertEqual('', chapter.previous_chapter_path)
-        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-2', chapter.next_chapter_path)
+        self.assertIsNone(chapter.previous_chapter)
+        self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-2', chapter.next_chapter.path)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""
@@ -342,45 +357,51 @@ Still, he did not leave. No matter what, he still had to eat.
                          chapter.content.text)
 
 
+# noinspection SpellCheckingInspection
 class WuxiaWorldApiSFFTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_SFF_Cover_C1_78F))
+        cls.browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_SFF_Cover_C1_78F)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        cls.browser.session.mount('https://', har_adapter)
+        cls.browser.session.mount('http://', har_adapter)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/stop-friendly-fire')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/stop-friendly-fire'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WuxiaWorldNovel))
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
-        self.assertEqual('/novel/stop-friendly-fire', novel.path)
-        self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire', novel.get_url())
+        self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
+        self.assertEqual('/novel/stop-friendly-fire', novel.url.path)
+        self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire', str(novel.alter_url()))
         self.assertEqual('Stop, Friendly Fire!', novel.title)
-        self.assertEqual('Boko', novel.author)
+        self.assertEqual('Toy Car (토이카)', novel.author)
         self.assertEqual('Boko', novel.translator)
         self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.rights)
-        self.assertEqual(datetime(2018, 9, 17, 23, 32, tzinfo=timezone.utc), novel.date)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', novel.first_chapter_path)
-        self.assertListEqual(['Korean', 'Ongoing'], novel.tags)
+        self.assertEqual(datetime(2018, 9, 17), novel.release_date)
+        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', novel.first_chapter.path)
+        self.assertListEqual(['Completed', 'Korean'], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/sff.jpg?ver=071937f5ef5b2d5c24cf1ae552850cd19f4b837d',
-            novel.img_url)
+            str(novel.cover_url))
         self.assertEqual('\nThe empire has turned into the land of the undead due to a spell gone wrong. God summoned '
                          'heroes from countless worlds to purify the empire and plant new hope. Lee Shin Woo, '
                          'an ordinary earthling, was also summoned. As an undead, that is.\xa0\n',
                          novel.description.text
                          )
-        self.assertEqual(5, len(novel.books))
+        self.assertEqual(13, len(novel.books))
         book = novel.books[0]
         self.assertEqual('Volume 1', book.title)
         self.assertEqual(23, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
         self.assertEqual('Prologue. This Trade is a Draw', chapter.title)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', chapter.path)
+        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', chapter.url.path)
         book = novel.books[1]
         self.assertEqual('Volume 2', book.title)
         self.assertEqual(23, len(book.chapter_entries))
@@ -389,28 +410,52 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
         self.assertEqual(23, len(book.chapter_entries))
         book = novel.books[3]
         self.assertEqual('Volume 4', book.title)
-        self.assertEqual(4, len(book.chapter_entries))
+        self.assertEqual(23, len(book.chapter_entries))
         book = novel.books[4]
         self.assertEqual('Volume 5', book.title)
-        self.assertEqual(0, len(book.chapter_entries))
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[5]
+        self.assertEqual('Volume 6', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[6]
+        self.assertEqual('Volume 7', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[7]
+        self.assertEqual('Volume 8', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[8]
+        self.assertEqual('Volume 9', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[9]
+        self.assertEqual('Volume 10', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[10]
+        self.assertEqual('Volume 11', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[11]
+        self.assertEqual('Volume 12', book.title)
+        self.assertEqual(23, len(book.chapter_entries))
+        book = novel.books[12]
+        self.assertEqual('Volume 13', book.title)
+        self.assertEqual(26, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy)
-        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1')
+        api = WuxiaWorldApi(self.browser)
+        chapter = api.get_chapter(parse_url('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
-        self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1', chapter.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+        self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1', str(chapter.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(chapter.alter_url('')))
         self.assertEqual("Prologue. This Trade is a Draw", chapter.title)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', chapter.path)
+        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', chapter.url.path)
         self.assertEqual('Boko', chapter.translator)
-        self.assertEqual(63263, chapter.id)
+        self.assertEqual(63263, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
-        self.assertEqual('', chapter.previous_chapter_path)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-2', chapter.next_chapter_path)
+        self.assertIsNone(chapter.previous_chapter)
+        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-2', chapter.next_chapter.path)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""
@@ -500,34 +545,40 @@ It only took around... 10 minutes before Lee Shin Woo figured out that this was 
                          chapter.content.text)
 
 
+# noinspection SpellCheckingInspection
 class WuxiaWorldApiASTTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_AST_Cover_C1_102))
+        cls.browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_AST_Cover_C1_102)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        cls.browser.session.mount('https://', har_adapter)
+        cls.browser.session.mount('http://', har_adapter)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/ancient-strengthening-technique')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WuxiaWorldNovel))
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertTrue(novel.karmaActive)
-        self.assertEqual('https://www.wuxiaworld.com', novel.get_url(''))
-        self.assertEqual('/novel/ancient-strengthening-technique', novel.path)
-        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique', novel.get_url())
+        self.assertTrue(novel._karma_active)
+        self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
+        self.assertEqual('/novel/ancient-strengthening-technique', novel.url.path)
+        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique', str(novel.alter_url()))
         self.assertEqual('Ancient Strengthening Technique', novel.title)
-        self.assertEqual('lordbluefire_98448380', novel.author)
+        self.assertEqual('I Am Superfluous', novel.author)
         self.assertEqual('lordbluefire_98448380', novel.translator)
         self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.rights)
-        self.assertEqual(datetime(2016, 11, 30, 0, 0), novel.date)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', novel.first_chapter_path)
+        self.assertEqual(datetime(2016, 11, 30, 0, 0), novel.release_date)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', novel.first_chapter.path)
         self.assertListEqual(['Chinese', 'Completed', 'Completed Recs'], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/ast.jpg?ver=3113ede98eb17afea8006f0024b2290aecd68c05',
-            novel.img_url)
+            str(novel.cover_url))
         self.maxDiff = None
         self.assertEqual("\nSynopsis:"
                          "A human warrior cultivating the Ancient Strengthening Technique has transcended dimensions "
@@ -555,7 +606,7 @@ class WuxiaWorldApiASTTest(unittest.TestCase):
         self.assertEqual(113, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
         self.assertEqual('Chapter 1 - Qing Clan, Qing Shui', chapter.title)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.url.path)
         book = novel.books[1]
         self.assertEqual('Vol 2: Legend of the Hundred Miles City, Peerless and Independent', book.title)
         self.assertEqual(46, len(book.chapter_entries))
@@ -609,24 +660,25 @@ class WuxiaWorldApiASTTest(unittest.TestCase):
         self.assertEqual(700, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.proxy)
-        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1')
+        api = WuxiaWorldApi(self.browser)
+        chapter = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1',
-                         chapter.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+                         str(chapter.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(chapter.alter_url('')))
         self.assertEqual("Chapter 1 - Qing Clan, Qing Shui", chapter.title)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.url.path)
         self.assertEqual('lordbluefire_98448380', chapter.translator)
-        self.assertEqual(14875, chapter.id)
+        self.assertEqual(14875, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
         self.assertFalse(chapter.karma_locked)
-        self.assertEqual('', chapter.previous_chapter_path)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-2', chapter.next_chapter_path)
+        self.assertIsNone(chapter.previous_chapter)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-2', chapter.next_chapter.path)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""
@@ -697,108 +749,49 @@ Editor: Ziltch
                          chapter.content.text)
 
     def test_parsing_chapter_101(self):
-        api = WuxiaWorldApi(self.proxy)
-        chapter = api.get_chapter('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101')
+        api = WuxiaWorldApi(self.browser)
+        chapter = api.get_chapter(
+            parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
         self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101',
-                         chapter.get_url())
-        self.assertEqual('https://www.wuxiaworld.com', chapter.get_url(''))
+                         str(chapter.url))
+        self.assertEqual('https://www.wuxiaworld.com', str(chapter.alter_url('')))
         self.assertEqual("Chapter 101 - A Quiet Beauty", chapter.title)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-101', chapter.path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-101', chapter.url.path)
         self.assertEqual('lordbluefire_98448380', chapter.translator)
-        self.assertEqual(14974, chapter.id)
+        self.assertEqual(14974, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
         self.assertTrue(chapter.karma_locked)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-100', chapter.previous_chapter_path)
-        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-102', chapter.next_chapter_path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-100', chapter.previous_chapter.path)
+        self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-102', chapter.next_chapter.path)
 
 
+# noinspection SpellCheckingInspection
 class WuxiaWorldApiSearchTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_SEARCH))
+    def test_search_default(self):
+        browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_SEARCH_DEFAULT)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        browser.session.mount('https://', har_adapter)
+        browser.session.mount('http://', har_adapter)
+        api = WuxiaWorldApi(browser)
+        results, n = api.search()
+        self.assertEqual(15, len(results))
+        self.assertEqual(59, n)
 
-    def test_search_title(self):
-        api = WuxiaWorldApi(self.proxy)
-        results = api.search('Warlock')
-        self.assertEqual(1, len(results))
-        result = results[0]
-        self.assertEqual(18, result.id)
-        self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', result.get_url())
-        self.assertEqual('Warlock of the Magus World', result.title)
-        self.assertEqual('novel/warlock-of-the-magus-world', result.path)
-        self.assertEqual('Warlock of the Magus World', result.name)
-        self.assertEqual('warlock-of-the-magus-world', result.slug)
-        self.assertEqual(
-            'https://cdn.wuxiaworld.com/images/covers/wmw.jpg?ver=2839cf223fce0da2ff6da6ae32ab0c4e705eee1a',
-            result.cover_url)
-        self.assertEqual('WMW', result.abbreviation)
-        self.assertEqual('<p>What happens when a scientist from a futuristic world reincarnates in a World of Magic '
-                         'and Knights?</p><p>An awesome MC &mdash; that&rsquo;s what happens!</p><p>A '
-                         'scientist&rsquo;s goal is to explore the secrets of the universe, and this is exactly what '
-                         'Leylin sets out to do when he is reincarnated. Dark, cold and calculating, he makes use of '
-                         'all his resources as he sets off on his adventures to meet his goal.</p><p><em>Face? Who '
-                         'needs that&hellip; Hmmm&hellip; that guy seems too powerful for me to take on now&hellip; I '
-                         'better keep a low profile for now.</em></p><p><em>You want me to help you? Sure&hellip; but '
-                         'what benefit can I get out of it? Nothing? Bye.</em></p><p><em>Hmmm&hellip; that guy looks '
-                         'like he might cause me problems in the future. Should I let him off for now and let him '
-                         'grow into someone that can threaten me&hellip;.. Nahhh. *kill*</em></p>', result.synopsis)
-        self.assertEqual('Chinese', result.language)
-        self.assertEqual(datetime.utcfromtimestamp(1470441600.0), result.time_created)
-        self.assertEqual(2, result.status)
-        self.assertEqual(1201, result.chapter_count)
-        self.assertListEqual(["Completed", "Chinese"], result.tags)
-
-    def test_search_abbreviation(self):
-        api = WuxiaWorldApi(self.proxy)
-        results = api.search('WMW')
-        self.assertEqual(1, len(results))
-        result = results[0]
-        self.assertEqual(18, result.id)
-
-    def test_search_title_middle(self):
-        api = WuxiaWorldApi(self.proxy)
-        results = api.search('Jewel')
-        self.assertEqual(1, len(results))
-        result = results[0]
-        self.assertEqual(30, result.id)
-        self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', result.get_url())
-        self.assertEqual('Heavenly Jewel Change', result.title)
-        self.assertEqual('novel/heavenly-jewel-change', result.path)
-        self.assertEqual('Heavenly Jewel Change', result.name)
-        self.assertEqual('heavenly-jewel-change', result.slug)
-        self.assertEqual(
-            'https://cdn.wuxiaworld.com/images/covers/hjc.jpg?ver=f83790a5f2ff64bb6524c2cfd207845ba1d25ac6',
-            result.cover_url)
-        self.assertEqual('HJC', result.abbreviation)
-        self.assertEqual('<p><em>[Zen&rsquo;s Synopsis]</em></p><p>In a world where power means everything, '
-                         'and the strong trample the weak; there was a boy born from a Heavenly Jewel Master. Born in '
-                         'a small country which had to struggle to survive, the boy was expected to do great things. '
-                         'Alas he turned out to have blocked meridians and was unable to cultivate, ending up the '
-                         'trash of society. His father&rsquo;s tarnished pride&hellip; his fiance&eacute;&rsquo;s '
-                         'ultimate dishonour&hellip;</p><p>Being almost accidentally killed and left for the dead, '
-                         'heaven finally smiles upon him as a miracle descends, awakening his potential as a Heavenly '
-                         'Jewel Master. Or&hellip; is it truly a gift?</p><p>Join our dear rascally and shameless MC '
-                         'Zhou Weiqing in his exploits to reach the peak of the cultivation world, form an army, '
-                         'protect those he loves, and improve his country!</p><p>An all new world, an all new power '
-                         'system, unique weaponry &amp; MC! Come join me in laughing and crying together with this '
-                         'new masterpiece from Tang Jia San Shao!</p><hr><p><em>[Translated '
-                         'Synopsis]</em></p><p>Every human has their Personal Jewel of power, when awakened it can '
-                         'either be an Elemental Jewel or Physical Jewel. They circle the right and left wrists like '
-                         'bracelets of power.</p><p>Heavenly Jewels are like the twins born, meaning when both '
-                         'Elemental and Physical Jewels are Awakened for the same person, the pair is known as '
-                         'Heavenly Jewels.</p><p>Those who have the Physical Jewels are known as Physical Jewel '
-                         'Masters, those with Elemental Jewels are Elemental Jewel Masters, and those who train with '
-                         'Heavenly Jewels are naturally called Heavenly Jewel Masters.</p><p>Heavenly Jewel Masters '
-                         'have a highest level of 12 pairs of jewels, as such their training progress is known as '
-                         'Heavenly Jewels 12 Changes.</p><p>Our MC here is an archer who has such a pair of Heavenly '
-                         'Jewels.</p>', result.synopsis)
-        self.assertEqual('Chinese', result.language)
-        self.assertEqual(datetime.utcfromtimestamp(1438473600.0), result.time_created)
-        self.assertEqual(2, result.status)
-        self.assertEqual(903, result.chapter_count)
-        self.assertListEqual(["Completed", "Chinese"], result.tags)
+    def test_search_modern(self):
+        browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_SEARCH_MODERN)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        browser.session.mount('https://', har_adapter)
+        browser.session.mount('http://', har_adapter)
+        api = WuxiaWorldApi(browser)
+        results, n = api.search(genres=(Genre.MODERN_SETTING,))
+        self.assertEqual(7, len(results))
+        self.assertEqual(7, n)

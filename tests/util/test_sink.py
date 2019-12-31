@@ -1,21 +1,28 @@
-import os
 import unittest
+
+from urllib3.util import parse_url
 
 import lightnovel.util as util
 from lightnovel.wuxiaworld import WuxiaWorldApi
-from tests.config import Har
-from util import HarProxy
+from tests.config import Har, resolve_path
+from webot import Firefox
+from webot.adapter import HarAdapter, load_har
 
 
 class HJCSinkTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.proxy = HarProxy(os.path.join(*Har.WW_HJC_COVER_C1_2))
+        cls.browser = Firefox()
+        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_HJC_COVER_C1_2)))
+        har_adapter.strict_matching = False
+        har_adapter.delete_after_match = False
+        cls.browser.session.mount('https://', har_adapter)
+        cls.browser.session.mount('http://', har_adapter)
 
     def test_parsing_hjc_description_as_string(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         self.assertTrue(novel.parse())
         description = util.StringHtmlSink().parse(novel.description)
@@ -34,8 +41,8 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          description)
 
     def test_parsing_hjc_description_as_markdown(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         self.assertTrue(novel.parse())
         description = util.MarkdownHtmlSink().parse(novel.description)
         self.assertEqual("""_[Zen’s Synopsis]_
@@ -64,8 +71,8 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          description)
 
     def test_parsing_hjc_description_as_latex(self):
-        api = WuxiaWorldApi(self.proxy)
-        novel = api.get_novel('https://www.wuxiaworld.com/novel/heavenly-jewel-change')
+        api = WuxiaWorldApi(self.browser)
+        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         self.assertTrue(novel.parse())
         description = util.LatexHtmlSink().parse(novel.description)
