@@ -38,7 +38,7 @@ browser.session.mount('https://', cache)
 browser.session.mount('http://', cache)
 api = WuxiaWorldApi(browser)
 
-# print(f"Login successful: {api.login('', '')}")  # Hey there, clearnet!
+# print(f"Login successful: {api.login('', '')}")
 # karma_normal, karma_golden = api.get_karma()
 # print(f"Karma: {karma_normal} normal, {karma_golden} golden")
 # print(f"Claiming karma successful: {api.claim_daily_karma()}")  # Idk why it doesn't claim them. It doesn't work. Maybe better like this tbh
