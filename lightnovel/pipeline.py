@@ -134,11 +134,20 @@ class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         unique_id = slugify(self.novel.title)
         filepath = self.join_to_path(self.filename)
-        with EpubFile(filepath, unique_id, self.novel.title, self.novel.language, identifier=str(self.novel.url),
-                      rights=self.novel.rights, publisher=self.novel.hoster,
-                      subject=' / '.join(['Web Novel', *self.novel.tags]), date=self.novel.release_date,
-                      description=self.novel.description.text, creator=self.novel.author, cover_image=self.novel.cover,
-                      mode='w') as epub:
+        with EpubFile(
+                file=filepath,
+                unique_id=unique_id,
+                title=self.novel.title,
+                language=self.novel.language if self.novel.language else '',
+                identifier=str(self.novel.url),
+                rights=self.novel.rights if self.novel.rights else '',
+                publisher=self.novel.hoster if self.novel.hoster else '',
+                subject=' / '.join(['Web Novel', *(self.novel.tags if self.novel.tags else [])]),
+                date=self.novel.release_date,
+                description=self.novel.description.text,
+                creator=self.novel.author if self.novel.author else self.novel.translator if self.novel.translator else '',
+                cover_image=self.novel.cover,
+                mode='w') as epub:
             self.log.debug(f"Opened file '{filepath}'")
             last_book = None
             for book, chapter in gen:
@@ -150,8 +159,7 @@ class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
                     self.log.debug(f"Saved book {book} to ({book_file.unique_id}): {book_file.filepath}")
                 chapter_file = ChapterFile(chapter)
                 epub.add_chapter(book_file, chapter_file)
-                self.log.debug(
-                    f"Saved chapter {chapter} to ({chapter_file.unique_id}): {chapter_file.filepath}")
+                self.log.debug(f"Saved chapter {chapter} to ({chapter_file.unique_id}): {chapter_file.filepath}")
                 yield book, chapter
 
 
