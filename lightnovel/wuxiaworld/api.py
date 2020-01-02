@@ -135,10 +135,16 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
 
     def parse(self) -> bool:
         head = self._document.select_one('head')
+        if not self._document.select_one('head meta[name="description"]').has_attr('content'):
+            self._success = False
+            return False
         json_data = json.loads(head.select_one('script[type="application/ld+json"]').text)
         self._title = json_data['name']
         self.log.debug(f"Novel title is: {self._title}")
-        url = json_data['potentialAction']['target']['urlTemplate']
+        url = json_data['potentialAction']['target'].get('urlTemplate', '')
+        if url == '':
+            self._success = False
+            return False
         self._first_chapter_path = parse_url(url).path
         descl: List[str] = self._document.select_one('dl.dl-horizontal').text.strip('\n').split('\n')
         while len(descl) > 0:
@@ -226,29 +232,31 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
         url = parse_url(head.select_one('link[rel="canonical"]').get('href'))
         if url.path == '/Error':
             return False
-        json_str = head.select_one('script[type="application/ld+json"]').text
-        json_data = json.loads(json_str)
-        self._translator = json_data['author']['name']
-        # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', '
-        for script_tag in head.select('script'):
-            script = script_tag.text.strip('\n \t;')
-            if script.startswith('var CHAPTER = '):
-                json_data = json.loads(script[14:])
-                break
-        self._title = json_data['name']
-        self._chapter_id = int(json_data['id'])
-        self._is_teaser = json_data['isTeaser']
-        self._previous_chapter_path = json_data['prevChapter']
-        self._next_chapter_path = json_data['nextChapter']
-        if self._title == '':
-            self.log.warning("Couldn't extract data from CHAPTER variable.")
-        self._content = self._document.select_one('div.p-15 div.fr-view')
-        karma_well = self._content.select_one('div.well')
-        self._karma_locked = karma_well is not None
-        if self._karma_locked:
-            self.log.warning("This chapter requires karma points to unlock.")
-        self._success = True
-        return True
+        self._karma_locked = False  # Haxx
+        if self.is_complete():
+            json_str = head.select_one('script[type="application/ld+json"]').text
+            json_data = json.loads(json_str)
+            self._translator = json_data['author']['name']
+            # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', '
+            for script_tag in head.select('script'):
+                script = script_tag.text.strip('\n \t;')
+                if script.startswith('var CHAPTER = '):
+                    json_data = json.loads(script[14:])
+                    break
+            self._title = json_data['name']
+            self._chapter_id = int(json_data['id'])
+            self._is_teaser = json_data['isTeaser']
+            self._previous_chapter_path = json_data['prevChapter']
+            self._next_chapter_path = json_data['nextChapter']
+            if self._title == '':
+                self.log.warning("Couldn't extract data from CHAPTER variable.")
+            self._content = self._document.select_one('div.p-15 div.fr-view')
+            karma_well = self._content.select_one('div.well')
+            self._karma_locked = karma_well is not None
+            if self._karma_locked:
+                self.log.warning("This chapter requires karma points to unlock.")
+            self._success = True
+            return True
 
     def is_complete(self) -> bool:
         return self._document.select_one('head meta[name="description"]').has_attr('content') and not self.karma_locked
