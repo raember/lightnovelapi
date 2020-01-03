@@ -3,7 +3,7 @@ import logging
 from pipeline import EpubMaker, Parser, DeleteChapters
 from webot import Firefox
 from webot.adapter import CacheAdapter
-from wuxiaworld import WuxiaWorldApi
+from wuxiaworld_com import WuxiaWorldComApi
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(name)18s: %(message)s',
@@ -36,7 +36,7 @@ browser._accept_encoding = ['deflate', 'gzip']  # brotli (br) is cumbersome
 cache = CacheAdapter()
 browser.session.mount('https://', cache)
 browser.session.mount('http://', cache)
-api = WuxiaWorldApi(browser)
+api = WuxiaWorldComApi(browser)
 
 # print(f"Login successful: {api.login('', '')}")
 # karma_normal, karma_golden = api.get_karma()
@@ -68,7 +68,7 @@ if n > len(lst):
 #     'https://www.wuxiaworld.com/novel/the-unrivaled-tang-sect'
 # ]
 newly_fetched = {}
-urls = list(map(lambda i: i.alter_url(), lst))
+urls = list(map(lambda i: i.url, lst[16:]))
 for url in urls:
     # Rip,
     novel, gen = api.get_entire_novel(url)

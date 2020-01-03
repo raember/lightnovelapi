@@ -104,7 +104,7 @@ class ChapterConflation(Pipeline):
 class Output(Pipeline, ABC):
 
     def __init__(self, novel: Novel, ext: str, out_path: str = 'out'):
-        super().__init__()
+        super(Output, self).__init__()
         if not novel.success:
             self.log.warning("Novel wasn't parsed successfully.")
         self.novel = novel
@@ -112,7 +112,7 @@ class Output(Pipeline, ABC):
         self.out_path = out_path
         self.slug_title = slugify(novel.title, lowercase=False)
         self.filename = f"{self.slug_title}.{self.ext}"
-        self.path = os.path.join(out_path, self.novel.hoster, self.slug_title, ext)
+        self.path = os.path.join(out_path, self.novel.url.hostname)
         make_sure_dir_exists(self.path)
 
     def join_to_path(self, *paths: str) -> str:
@@ -141,7 +141,7 @@ class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
                 language=self.novel.language if self.novel.language else '',
                 identifier=str(self.novel.url),
                 rights=self.novel.rights if self.novel.rights else '',
-                publisher=self.novel.hoster if self.novel.hoster else '',
+                publisher=self.novel.url.hostname,
                 subject=' / '.join(['Web Novel', *(self.novel.tags if self.novel.tags else [])]),
                 date=self.novel.release_date,
                 description=self.novel.description.text,
