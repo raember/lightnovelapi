@@ -13,18 +13,17 @@ from webot.adapter import CacheAdapter
 from webot.util import encode_form_data
 
 
-class WuxiaWorld:
-    hostname = 'www.wuxiaworld.com'
-    _hoster = 'WuxiaWorld'
-
-
-class WuxiaWorldChapterEntry(WuxiaWorld, ChapterEntry):
+class WuxiaWorldCom:
     pass
 
 
-class WuxiaWorldBook(WuxiaWorld, Book):
-    _chapter_entries: List[WuxiaWorldChapterEntry] = []
-    _chapters: List['WuxiaWorldChapter'] = []
+class WuxiaWorldComChapterEntry(WuxiaWorldCom, ChapterEntry):
+    pass
+
+
+class WuxiaWorldComBook(WuxiaWorldCom, Book):
+    _chapter_entries: List[WuxiaWorldComChapterEntry] = []
+    _chapters: List['WuxiaWorldComChapter'] = []
 
 
 class Status(Enum):
@@ -91,7 +90,7 @@ class SortType(Enum):
     NEW = 'New'
 
 
-class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
+class WuxiaWorldComSearchEntry(WuxiaWorldCom, SearchEntry):
     id: int
     name: str
     slug: str
@@ -129,8 +128,8 @@ class WuxiaWorldSearchEntry(WuxiaWorld, SearchEntry):
             self._url = self.alter_url(f"novel/{self.slug}")
 
 
-class WuxiaWorldNovel(WuxiaWorld, Novel):
-    _books: List[WuxiaWorldBook]
+class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
+    _books: List[WuxiaWorldComBook]
     _karma_active: bool = False
 
     def parse(self) -> bool:
@@ -182,12 +181,12 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         self.log.debug(f"Tags found: {tags}")
         return tags
 
-    def __extract_books(self, p15: Tag) -> List[WuxiaWorldBook]:
+    def __extract_books(self, p15: Tag) -> List[WuxiaWorldComBook]:
         books = []
         book_index = 0
         for book_html in p15.select('div#accordion div.panel.panel-default'):
             book_index += 1
-            book = WuxiaWorldBook(book_html.select_one('a.collapsed').text.strip())
+            book = WuxiaWorldComBook(book_html.select_one('a.collapsed').text.strip())
             book.novel = self
             book.index = book_index
             book._chapter_entries = self.__extract_chapters(book_html)
@@ -195,12 +194,12 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
             books.append(book)
         return books
 
-    def __extract_chapters(self, book_html: Tag) -> List[WuxiaWorldChapterEntry]:
+    def __extract_chapters(self, book_html: Tag) -> List[WuxiaWorldComChapterEntry]:
         chapters = []
         chapter_index = 0
         for chapter_html in book_html.select('div div li a'):
             chapter_index += 1
-            chapter = WuxiaWorldChapterEntry(
+            chapter = WuxiaWorldComChapterEntry(
                 Url('https', host='www.wuxiaworld.com', path=chapter_html.get('href')),
                 title=chapter_html.text.strip()
             )
@@ -210,7 +209,7 @@ class WuxiaWorldNovel(WuxiaWorld, Novel):
         return chapters
 
 
-class WuxiaWorldChapter(WuxiaWorld, Chapter):
+class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
     _chapter_id: int
     _is_teaser: bool
     _karma_locked: bool
@@ -230,7 +229,7 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
     def parse(self) -> bool:
         head = self._document.select_one('head')
         url = parse_url(head.select_one('link[rel="canonical"]').get('href'))
-        if url.path == '/Error':
+        if url.path.startswith('/preview') or url.path.startswith('/Error'):
             return False
         self._karma_locked = False  # Haxx
         if self.is_complete():
@@ -332,12 +331,12 @@ class WuxiaWorldChapter(WuxiaWorld, Chapter):
                 desc.attrs = {}
 
 
-class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
-    def get_novel(self, url: Url) -> WuxiaWorldNovel:
-        return WuxiaWorldNovel(url, self._get_document(url))
+class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
+    def get_novel(self, url: Url) -> WuxiaWorldComNovel:
+        return WuxiaWorldComNovel(url, self._get_document(url))
 
-    def get_chapter(self, url: Url) -> WuxiaWorldChapter:
-        return WuxiaWorldChapter(url, self._get_document(url))
+    def get_chapter(self, url: Url) -> WuxiaWorldComChapter:
+        return WuxiaWorldComChapter(url, self._get_document(url))
 
     # TODO: Respect robots.txt and don't use /api/* calls. Instead, use https://www.wuxiaworld.com/sitemap/novels
     def search(
@@ -349,7 +348,7 @@ class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
             sort_by: SortType = SortType.NAME,
             sort_asc: bool = True,
             search_after: int = None,
-            count: int = 15) -> Tuple[List[WuxiaWorldSearchEntry], int]:
+            count: int = 15) -> Tuple[List[WuxiaWorldComSearchEntry], int]:
         """Searches for novels matching certain criteria. Violates robots.txt
 
         :param title: The title or abbreviation to search for.
@@ -386,7 +385,7 @@ class WuxiaWorldApi(WuxiaWorld, LightNovelApi):
         assert data['result']
         entries = []
         for item in data['items']:
-            entries.append(WuxiaWorldSearchEntry(item))
+            entries.append(WuxiaWorldComSearchEntry(item))
         return entries, int(data['total'])
 
     def fetch_session_cookie_if_necessary(self):

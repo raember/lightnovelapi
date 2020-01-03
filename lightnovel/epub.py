@@ -233,7 +233,7 @@ class ContainerFile(XHtmlFile):
 
 class ChapterFile(XHtmlFile):
     def __init__(self, chapter: Chapter):
-        super().__init__()
+        super(ChapterFile, self).__init__()
         self.chapter = chapter
         book_n = chapter.book.number
         chapter_n = chapter._index
@@ -260,7 +260,7 @@ class ChapterFile(XHtmlFile):
 
 class BookFile(XHtmlFile):
     def __init__(self, book: Book):
-        super().__init__()
+        super(BookFile, self).__init__()
         self.book = book
         self.filepath = f"OEBPS/{book.index}_{slugify(book.title)}.{self.ext}"
         self.unique_id = f"book_{book.index}"
