@@ -488,10 +488,10 @@ class LightNovelApi(ABC):
         else:
             self.log.debug("Delay already expired. No need to wait")
 
-    def search(self, title: str) -> List[SearchEntry]:
+    def search(self, **kwargs) -> List[SearchEntry]:
         """
         Searches for a novel by title.
-        :param title: The title to search for.
+        :param kwargs: The search parameters to use.
         :return: A list of SearchEntry.
         """
         raise NotImplementedError
