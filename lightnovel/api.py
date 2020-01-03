@@ -49,7 +49,6 @@ class LightNovelPage(LightNovelEntity):
     """A html document of a light novel page"""
     _document: BeautifulSoup
     _success: bool
-    _hoster: str = ''
     _title: str = ''
     _language: str = ''
     _author: str = ''
@@ -75,10 +74,6 @@ class LightNovelPage(LightNovelEntity):
     @property
     def success(self) -> bool:
         return self._success
-
-    @property
-    def hoster(self) -> Optional[str]:
-        return self._hoster if self._hoster else None
 
     @property
     def title(self) -> Optional[str]:
@@ -559,9 +554,9 @@ class LightNovelApi(ABC):
         :param browser: The browser to use for the LightNovelApi.
         :return: An instance of a LightNovelApi.
         """
-        from wuxiaworld import WuxiaWorldApi
+        from wuxiaworld_com import WuxiaWorldComApi
         apis = [
-            WuxiaWorldApi(browser)
+            WuxiaWorldComApi(browser)
         ]
         parsed = parse_url(url)
         for api in apis:
