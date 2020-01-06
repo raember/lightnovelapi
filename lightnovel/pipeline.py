@@ -5,12 +5,13 @@ from abc import ABC
 from typing import Generator
 from typing import Tuple
 
+# noinspection PyProtectedMember
+from spoofbot import Browser
+from spoofbot.adapter import CacheAdapter
+
 from api import Book, Chapter, Novel
 from epub import EpubFile, BookFile, ChapterFile
 from util import slugify, make_sure_dir_exists
-# noinspection PyProtectedMember
-from webot import Browser
-from webot.adapter import CacheAdapter
 
 
 class Pipeline(ABC):

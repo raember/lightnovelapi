@@ -11,11 +11,11 @@ from typing import List, Any, Tuple, Generator, Optional
 from PIL import Image
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from spoofbot import Browser, Firefox
+from spoofbot.adapter import CacheAdapter
 from urllib3.util import parse_url, Url
 
 from util.text import slugify
-from webot import Browser, Firefox
-from webot.adapter import CacheAdapter
 
 
 class LightNovelEntity:

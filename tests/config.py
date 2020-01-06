@@ -2,8 +2,8 @@
 from os.path import dirname, abspath, join
 from typing import Tuple
 
-from adapter import HarAdapter, load_har
-from webot import Browser, Firefox
+from spoofbot import Browser, Firefox
+from spoofbot.adapter import HarAdapter, load_har
 
 ROOT = dirname(dirname(abspath(__file__)))
 

@@ -1,7 +1,8 @@
 import unittest
 
+from spoofbot import Firefox
+
 from lightnovel import LightNovelApi
-from webot import Firefox
 
 
 class ApiFactoryTest(unittest.TestCase):

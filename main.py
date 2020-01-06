@@ -1,8 +1,9 @@
 import logging
 
+from spoofbot import Firefox
+from spoofbot.adapter import CacheAdapter
+
 from pipeline import EpubMaker, Parser, DeleteChapters
-from webot import Firefox
-from webot.adapter import CacheAdapter
 from wuxiaworld_com import WuxiaWorldComApi
 
 # from settings import EMAIL, PASSWORD

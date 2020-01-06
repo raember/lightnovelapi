@@ -1,8 +1,12 @@
 import setuptools
+
 import lightnovel
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+with open("README.md", "r") as fp:
+    long_description = fp.read()
+
+with open("requirements.txt", "r") as fp:
+    requirements = [x.strip() for x in fp.readlines()]
 
 setuptools.setup(
     name='lightnovelapi',
@@ -14,9 +18,8 @@ setuptools.setup(
     keywords="light-novel novel lightnovel wuxiaworld",
     license="MIT",
     url='https://github.com/raember/lightnovelapi',
-    packages=setuptools.find_packages(exclude=['*test*']),
-    install_requires=['beautifulsoup4'],
-    test_suite="lightnovel/test",
+    packages=setuptools.find_packages(exclude=['test*', 'out', '.cache']),
+    install_requires=requirements,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -28,5 +31,6 @@ setuptools.setup(
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
         'Topic :: Other/Nonlisted Topic',
         'Topic :: Software Development :: Libraries :: Python Modules'
-    ]
+    ],
+    python_requires='>=3.6',
 )

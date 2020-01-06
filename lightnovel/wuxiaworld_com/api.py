@@ -6,11 +6,11 @@ from typing import List, Tuple
 
 # noinspection PyProtectedMember
 from bs4 import BeautifulSoup, Tag, NavigableString
+from spoofbot.adapter import CacheAdapter
+from spoofbot.util import encode_form_data
 from urllib3.util.url import parse_url, Url
 
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, SearchEntry
-from webot.adapter import CacheAdapter
-from webot.util import encode_form_data
 
 
 class WuxiaWorldCom:
