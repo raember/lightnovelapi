@@ -9,7 +9,8 @@ from io import BytesIO
 from typing import List, Any, Tuple, Generator, Optional
 
 from PIL import Image
-from bs4 import Tag, BeautifulSoup
+from bs4 import BeautifulSoup
+from bs4.element import Tag
 from urllib3.util import parse_url, Url
 
 from util.text import slugify
@@ -328,7 +329,7 @@ class SearchEntry(LightNovelEntity):
 
 
 class LightNovelApi(ABC):
-    hostname: str
+    _hostname: str
     _browser: Browser
     _last_request_timestamp: datetime
     _request_delay: timedelta
@@ -344,6 +345,10 @@ class LightNovelApi(ABC):
         self._request_delay = delay
         if not isinstance(browser.session.get_adapter('https://'), CacheAdapter):
             self.log.warning("Not using a CacheAdapter will take a long time for every run.")
+
+    @property
+    def hostname(self) -> str:
+        return self._hostname
 
     @property
     def browser(self) -> Browser:
@@ -515,6 +520,7 @@ class LightNovelApi(ABC):
             with open(chapter_path, 'w') as f:
                 f.write(f"\\chapter{{{chapter.title}}}\n{converter.parse(chapter.content)}")
         with open(os.path.join(folder, novel_title, novel_title + '.tex'), 'w') as f:
+            # noinspection SpellCheckingInspection
             f.write(f"""\\documentclass[oneside,11pt]{{memoir}}
 \\usepackage[normalem]{{ulem}}
 \\usepackage{{fontspec}}

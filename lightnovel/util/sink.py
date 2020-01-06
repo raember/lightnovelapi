@@ -176,6 +176,7 @@ class LatexHtmlSink(HtmlSink):
     def _parse_underline(self, tag: Tag) -> str:
         return f"\\underline{{{self._parse_sub_tags(tag)}}}"
 
+    # noinspection SpellCheckingInspection
     def _parse_del(self, tag: Tag) -> str:
         # \usepackage[normalem]{ulem}
         return f"\\sout{{{self._parse_sub_tags(tag)}}}"

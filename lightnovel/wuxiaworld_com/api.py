@@ -14,7 +14,7 @@ from webot.util import encode_form_data
 
 
 class WuxiaWorldCom:
-    pass
+    _hostname = 'www.wuxiaworld.com'
 
 
 class WuxiaWorldComChapterEntry(WuxiaWorldCom, ChapterEntry):
@@ -132,12 +132,23 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
     _books: List[WuxiaWorldComBook]
     _karma_active: bool = False
 
+    @property
+    def karma_active(self) -> bool:
+        return self._karma_active
+
     def parse(self) -> bool:
         head = self._document.select_one('head')
-        if not self._document.select_one('head meta[name="description"]').has_attr('content'):
-            self._success = False
+        if not isinstance(head, Tag):
+            raise Exception("Unexpected type of tag selection")
+        meta_description = head.select_one('meta[name="description"]')
+        if not isinstance(meta_description, Tag):
+            raise Exception("Unexpected type of tag selection")
+        if not meta_description.has_attr('content'):
             return False
-        json_data = json.loads(head.select_one('script[type="application/ld+json"]').text)
+        head_json = head.select_one('script[type="application/ld+json"]')
+        if not isinstance(head_json, Tag):
+            raise Exception("Unexpected type of tag selection")
+        json_data = json.loads(head_json.text)
         self._title = json_data['name']
         self.log.debug(f"Novel title is: {self._title}")
         url = json_data['potentialAction']['target'].get('urlTemplate', '')
@@ -145,27 +156,38 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
             self._success = False
             return False
         self._first_chapter_path = parse_url(url).path
-        descl: List[str] = self._document.select_one('dl.dl-horizontal').text.strip('\n').split('\n')
-        while len(descl) > 0:
-            if descl[0] == "Translator:":
-                descl.pop(0)
-                self._translator = descl.pop(0)
-            elif descl[0] == "Author:":
-                descl.pop(0)
-                self._author = descl.pop(0)
+        description_list = self._document.select_one('dl.dl-horizontal')
+        if not isinstance(description_list, Tag):
+            raise Exception("Unexpected type of tag selection")
+        descriptions = description_list.text.strip('\n').split('\n')
+        while len(descriptions) > 0:
+            if descriptions[0] == "Translator:":
+                descriptions.pop(0)
+                self._translator = descriptions.pop(0)
+            elif descriptions[0] == "Author:":
+                descriptions.pop(0)
+                self._author = descriptions.pop(0)
             else:
-                self.log.warning(f"Discarding description entry {descl.pop(0)}")
+                self.log.warning(f"Discarding description entry {descriptions.pop(0)}")
         # self._author = dl.contents[7].text
         # self._translator = dl.contents[3].text  # json_data['author']['name']
-        self._rights = html.unescape(self._document.select_one('p.legal').getText())
+        legal_paragraph = self._document.select_one('p.legal')
+        if not isinstance(legal_paragraph, Tag):
+            raise Exception("Unexpected type of tag selection")
+        self._rights = html.unescape(legal_paragraph.getText())
         self._release_date = datetime.fromisoformat(json_data['datePublished'])
         for tag in head.select('script[type="text/javascript"]'):
             if "karmaActive" in tag.text:
                 self._karma_active = "karmaActive: true" in tag.text
         if self._karma_active:
             self.log.warning("This novel might require karma points to unlock chapters.")
-        self._cover_url = head.select_one('meta[property="og:image"]').get('content')
+        meta_image = head.select_one('meta[property="og:image"]')
+        if not isinstance(meta_image, Tag):
+            raise Exception("Unexpected type of tag selection")
+        self._cover_url = meta_image.get('content')
         p15 = self._document.select_one('div.p-15')
+        if not isinstance(p15, Tag):
+            raise Exception("Unexpected type of tag selection")
         self._tags = self.__extract_tags(p15)
         self._description = p15.select('div.fr-view')[1]
         self._books = self.__extract_books(p15)
@@ -228,12 +250,20 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
 
     def parse(self) -> bool:
         head = self._document.select_one('head')
-        url = parse_url(head.select_one('link[rel="canonical"]').get('href'))
+        if not isinstance(head, Tag):
+            raise Exception("Unexpected type of tag selection")
+        link = head.select_one('link[rel="canonical"]')
+        if not isinstance(link, Tag):
+            raise Exception("Unexpected type of tag selection")
+        url = parse_url(link.get('href'))
         if url.path.startswith('/preview') or url.path.startswith('/Error'):
             return False
-        self._karma_locked = False  # Haxx
+        self._karma_locked = False  # For is_complete() to run smoothly
         if self.is_complete():
-            json_str = head.select_one('script[type="application/ld+json"]').text
+            head_json = head.select_one('script[type="application/ld+json"]')
+            if not isinstance(head_json, Tag):
+                raise Exception("Unexpected type of tag selection")
+            json_str = head_json.text
             json_data = json.loads(json_str)
             self._translator = json_data['author']['name']
             # self.title = head.select_one('meta[property=og:title]').get('content').replace('  ', '
@@ -249,7 +279,10 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
             self._next_chapter_path = json_data['nextChapter']
             if self._title == '':
                 self.log.warning("Couldn't extract data from CHAPTER variable.")
-            self._content = self._document.select_one('div.p-15 div.fr-view')
+            content = self._document.select_one('div.p-15 div.fr-view')
+            if not isinstance(content, Tag):
+                raise Exception("Unexpected type of tag selection")
+            self._content = content
             karma_well = self._content.select_one('div.well')
             self._karma_locked = karma_well is not None
             if self._karma_locked:
@@ -258,7 +291,10 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
             return True
 
     def is_complete(self) -> bool:
-        return self._document.select_one('head meta[name="description"]').has_attr('content') and not self.karma_locked
+        meta_description = self._document.select_one('head meta[name="description"]')
+        if not isinstance(meta_description, Tag):
+            raise Exception("Unexpected type of description meta data")
+        return meta_description.has_attr('content') and not self.karma_locked
 
     def clean_content(self):
         bs = BeautifulSoup(features="html5lib")
@@ -275,7 +311,7 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
                     self.log.warning(f"Non-Empty string: '{child}'.")
             elif isinstance(child, Tag):
                 # ['p', 'div', 'a', 'blockquote', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5']
-                if child.name == 'blockquote':  # Blockquotes have to have a paragraph within
+                if child.name == 'blockquote':  # Block quotes have to have a paragraph within
                     p = bs.new_tag('p')
                     for children in child.children:
                         p.append(children)
@@ -364,7 +400,8 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
         self.log.warning("This method violates robots.txt.")
         self.fetch_session_cookie_if_necessary()
         self.check_wait_condition()
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = False
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = False
         response = self._browser.post("https://www.wuxiaworld.com/api/novels/search", headers={
             'Accept': 'application/json, text/plain, */*',
             'Content-Type': 'application/json;charset=utf-8',
@@ -379,7 +416,8 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
             "searchAfter": search_after,
             "count": count,
         }, separators=(',', ':')))
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = True
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = True
         self._last_request_timestamp = datetime.now()
         data = response.json()
         assert data['result']
@@ -391,9 +429,11 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
     def fetch_session_cookie_if_necessary(self):
         if not self._browser.session.cookies.get('__cfduid'):
             self.check_wait_condition()
-            if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = False
-            resp = self._browser.navigate('https://www.wuxiaworld.com')
-            if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = True
+            if isinstance(self.adapter, CacheAdapter):
+                self.adapter.use_cache = False
+            self._browser.navigate('https://www.wuxiaworld.com')
+            if isinstance(self.adapter, CacheAdapter):
+                self.adapter.use_cache = True
         # assert self._browser.session.cookies.get('__cfduid')  # Messes up tests with cache that don't store headers
 
     def login(self, email: str, password: str, remember: bool = False) -> bool:
@@ -407,13 +447,16 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
         """
         self.fetch_session_cookie_if_necessary()
         self.check_wait_condition()
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = False
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = False
         login_page = self._get_document(parse_url("https://www.wuxiaworld.com/account/login"))
-        rvt_input: Tag = login_page.select_one('input[name="__RequestVerificationToken"]')
+        rvt_input = login_page.select_one('input[name="__RequestVerificationToken"]')
+        if not isinstance(rvt_input, Tag):
+            raise Exception("Unexpected type of request verification token")
         data = [
             ('Email', email),
             ('Password', password),
-            ('RememberMe', 'true'),
+            ('RememberMe', 'true' if remember else 'false'),
             ('__RequestVerificationToken', rvt_input.get('value')),
             ('RememberMe', 'false')
         ]
@@ -421,7 +464,8 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
         response = self._browser.post('https://www.wuxiaworld.com/account/login', headers={
             'Content-Type': 'application/x-www-form-urlencoded'
         }, data=encode_form_data(data))
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = True
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = True
         self._last_request_timestamp = datetime.now()
         response.raise_for_status()
         return 200 <= response.status_code < 300
@@ -447,11 +491,15 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
         :return: A tuple of the karma (normal and gold karma)
         """
         self.fetch_session_cookie_if_necessary()
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = False
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = False
         karma_page = self._get_document(parse_url("https://www.wuxiaworld.com/profile/karma"))
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = True
-        karma_table: Tag = karma_page.select_one("div.table-responsive table tbody")
-        karma_table_rows: Tag = karma_table.select("tr")
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = True
+        karma_table = karma_page.select_one("div.table-responsive table tbody")
+        if not isinstance(karma_table, Tag):
+            raise Exception("Unexpected type of table query")
+        karma_table_rows = karma_table.select("tr")
         regular_karma = self._get_karma_from_table_row(karma_table_rows[0])
         gold_karma = self._get_karma_from_table_row(karma_table_rows[1])
         return regular_karma, gold_karma
@@ -462,10 +510,14 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
 
     def claim_daily_karma(self) -> bool:
         self.fetch_session_cookie_if_necessary()
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = False
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = False
         mission_page = self._get_document(parse_url("https://www.wuxiaworld.com/profile/missions"))
-        if isinstance(self.adapter, CacheAdapter): self.adapter.use_cache = True
-        rvt_input: Tag = mission_page.select_one('input[name="__RequestVerificationToken"]')
+        if isinstance(self.adapter, CacheAdapter):
+            self.adapter.use_cache = True
+        rvt_input = mission_page.select_one('input[name="__RequestVerificationToken"]')
+        if not isinstance(rvt_input, Tag):
+            raise Exception("Unexpected type of request verification token")
         if not rvt_input:
             return False
         data = [

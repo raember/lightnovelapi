@@ -202,6 +202,7 @@ class ContentFile(OpfFile):
     def __create_spine_entry(self, unique_id: str, **kwargs):
         attrs = {'idref': unique_id}
         attrs.update(kwargs)
+        # noinspection SpellCheckingInspection
         spine_entry = self.content.new_tag('itemref', attrs=attrs)
         return spine_entry
 
@@ -223,6 +224,7 @@ class ContentFile(OpfFile):
 
 class ContainerFile(XHtmlFile):
     filepath = 'META-INF/container.xml'
+    # noinspection SpellCheckingInspection
     content = f'''<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <odfc:container xmlns:odfc="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
   <odfc:rootfiles>
@@ -236,11 +238,12 @@ class ChapterFile(XHtmlFile):
         super(ChapterFile, self).__init__()
         self.chapter = chapter
         book_n = chapter.book.number
-        chapter_n = chapter._index
+        chapter_n = chapter.index
         self.sanitized_title = sanitize_for_html(chapter.extract_clean_title())
         self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.extract_clean_title())}.xhtml"
         self.unique_id = f"chap_{book_n}_{chapter_n}"
         title = sanitize_for_html(chapter.extract_clean_title())
+        # noinspection SpellCheckingInspection
         self.content = BeautifulSoup(f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -265,6 +268,7 @@ class BookFile(XHtmlFile):
         self.filepath = f"OEBPS/{book.index}_{slugify(book.title)}.{self.ext}"
         self.unique_id = f"book_{book.index}"
         title = sanitize_for_html(book.title)
+        # noinspection SpellCheckingInspection
         self.content = BeautifulSoup(f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -339,6 +343,7 @@ class TOC(NcxFile):
       {chapters_str}
     </ncx:navPoint>''')
         books_str = '    ' + '\n    '.join(book_entries)
+        # noinspection SpellCheckingInspection
         self.content = f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx:ncx xmlns:ncx="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
@@ -397,12 +402,11 @@ class CoverFile(XHtmlFile):
 
 
 class EpubFile(ZipFile):
-    # noinspection PyPep8Naming
     def __init__(self, file: str, unique_id: str, title: str, language: str, identifier: str, rights: str = None,
                  publisher: str = None, subject: str = None, date: datetime = None, description: str = None,
                  creator: str = None, cover_image: Image = None, toc_depth=2, mode="r", compression=ZIP_STORED,
-                 allowZip64=True, compresslevel=None):
-        super().__init__(file, mode, compression, allowZip64, compresslevel)
+                 allow_zip64=True, compress_level=None):
+        super().__init__(file, mode, compression, allow_zip64, compress_level)
         mimetype = MimeTypeFile()
         self.__write_file(mimetype)
         container = ContainerFile()
