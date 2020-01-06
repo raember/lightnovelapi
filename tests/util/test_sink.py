@@ -3,25 +3,19 @@ import unittest
 from urllib3.util import parse_url
 
 import lightnovel.util as util
-from lightnovel.wuxiaworld import WuxiaWorldApi
-from tests.config import Har, resolve_path
-from webot import Firefox
-from webot.adapter import HarAdapter, load_har
+from lightnovel.wuxiaworld_com import WuxiaWorldComApi
+from tests.config import Har, prepare_browser
 
 
+# noinspection SpellCheckingInspection,DuplicatedCode
 class HJCSinkTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_HJC_COVER_C1_2)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        cls.browser.session.mount('https://', har_adapter)
-        cls.browser.session.mount('http://', har_adapter)
+        cls.browser = prepare_browser(Har.WW_HJC_COVER_C1_2)
 
     def test_parsing_hjc_description_as_string(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         self.assertTrue(novel.parse())
@@ -41,7 +35,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          description)
 
     def test_parsing_hjc_description_as_markdown(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         self.assertTrue(novel.parse())
         description = util.MarkdownHtmlSink().parse(novel.description)
@@ -71,7 +65,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
                          description)
 
     def test_parsing_hjc_description_as_latex(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         self.assertTrue(novel.parse())
@@ -80,7 +74,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
 In a world where power means everything, and the strong trample the weak; there was a boy born from a Heavenly Jewel Master. Born in a small country which had to struggle to survive, the boy was expected to do great things. Alas he turned out to have blocked meridians and was unable to cultivate, ending up the trash of society. His father’s tarnished pride... his fianceé’s ultimate dishonour...\\\\ \\relax
 Being almost accidentally killed and left for the dead, heaven finally smiles upon him as a miracle descends, awakening his potential as a Heavenly Jewel Master. Or... is it truly a gift?\\\\ \\relax
 Join our dear rascally and shameless MC Zhou Weiqing in his exploits to reach the peak of the cultivation world, form an army, protect those he loves, and improve his country!\\\\ \\relax
-An all new world, an all new power system, unique weaponry \& MC! Come join me in laughing and crying together with this new masterpiece from Tang Jia San Shao!\\\\ \\relax
+An all new world, an all new power system, unique weaponry \\& MC! Come join me in laughing and crying together with this new masterpiece from Tang Jia San Shao!\\\\ \\relax
 \\hrule
 \\textit{[Translated Synopsis]}\\\\ \\relax
 Every human has their Personal Jewel of power, when awakened it can either be an Elemental Jewel or Physical Jewel. They circle the right and left wrists like bracelets of power.\\\\ \\relax

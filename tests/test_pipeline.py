@@ -2,25 +2,18 @@ import unittest
 
 from urllib3.util import parse_url
 
-from lightnovel.wuxiaworld import WuxiaWorldApi
+from lightnovel.wuxiaworld_com import WuxiaWorldComApi
 from pipeline import ChapterConflation
-from tests.config import Har, resolve_path
-from webot import Firefox
-from webot.adapter import HarAdapter, load_har
+from tests.config import Har, prepare_browser
 
 
-class WuxiaWorldApiHjcTest(unittest.TestCase):
+class WuxiaWorldComApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_HJC_COVER_C1_2)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        cls.browser.session.mount('https://', har_adapter)
-        cls.browser.session.mount('http://', har_adapter)
+        cls.browser = prepare_browser(Har.WW_HJC_COVER_C1_2)
 
     def test_conflation_chapter_1_2(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         chapter1 = api.get_chapter(
@@ -41,6 +34,7 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         ChapterConflation.conflate(chapter1, chapter2)
 
         self.maxDiff = None
+        # noinspection SpellCheckingInspection
         self.assertEqual("""
 Heavenly Bow Empire Capital City, Heavenly Bow City, Official Roads.
 Heavenly Bow Empire is a small country in the western regions of Boundless Mainland (Hao Miao Da Lu). It isn’t bound to any larger countries, and its environment and climate are extremely suitable for humans to live in.

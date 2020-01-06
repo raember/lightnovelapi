@@ -211,3 +211,5 @@ dmypy.json
 .cache
 # Out
 out
+# Settings (login credentials)
+settings.py
