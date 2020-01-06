@@ -2,6 +2,9 @@
 from os.path import dirname, abspath, join
 from typing import Tuple
 
+from adapter import HarAdapter, load_har
+from webot import Browser, Firefox
+
 ROOT = dirname(dirname(abspath(__file__)))
 
 
@@ -24,3 +27,13 @@ class Har:
     WW_SEARCH = (*data_folder, 'WW_Search.har')
     WW_SEARCH_DEFAULT = (*data_folder, 'WW_Search_default.har')
     WW_SEARCH_MODERN = (*data_folder, 'WW_Search_modern.har')
+
+
+def prepare_browser(har_path: Tuple) -> Browser:
+    browser = Firefox()
+    har_adapter = HarAdapter(load_har(resolve_path(har_path)))
+    har_adapter.strict_matching = False
+    har_adapter.delete_after_match = False
+    browser.session.mount('https://', har_adapter)
+    browser.session.mount('http://', har_adapter)
+    return browser

@@ -5,40 +5,30 @@ from webot import Firefox
 from webot.adapter import CacheAdapter
 from wuxiaworld_com import WuxiaWorldComApi
 
+# from settings import EMAIL, PASSWORD
+
+# noinspection SpellCheckingInspection
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(name)18s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO
 )
 logging.getLogger("urllib3").setLevel(logging.ERROR)
+# noinspection SpellCheckingInspection
 logging.getLogger('chardet.charsetprober').setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
 
 # Set it
-# URL = 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world'  # TODO: Fix missing toc
-# URL = 'https://www.wuxiaworld.com/novel/heavenly-jewel-change'  # TODO: Fix missing cover
-# URL = 'https://www.wuxiaworld.com/novel/martial-world'
-# URL = 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms'
-# URL = 'https://www.wuxiaworld.com/novel/i-shall-seal-the-heavens'
-# URL = 'https://www.wuxiaworld.com/novel/stellar-transformations'
-# URL = 'https://www.wuxiaworld.com/novel/a-will-eternal'
-# URL = 'https://www.wuxiaworld.com/novel/battle-through-the-heavens'
-# URL = 'https://www.wuxiaworld.com/novel/i-reincarnated-for-nothing'
-# URL = 'https://www.wuxiaworld.com/novel/the-divine-elements'
-# URL = 'https://www.wuxiaworld.com/novel/wu-dong-qian-kun'
-# URL = 'https://www.wuxiaworld.com/novel/the-sword-and-the-shadow'
-# URL = 'https://www.wuxiaworld.com/novel/ancient-strengthening-technique'  # TODO: Karma/VIP
-# URL = 'https://www.wuxiaworld.com/novel/renegade-immortal'
-
-# Make it
 browser = Firefox()
 browser._accept_encoding = ['deflate', 'gzip']  # brotli (br) is cumbersome
 cache = CacheAdapter()
 browser.session.mount('https://', cache)
 browser.session.mount('http://', cache)
+
+# Make it
 api = WuxiaWorldComApi(browser)
 
-# print(f"Login successful: {api.login('', '')}")
+# print(f"Login successful: {api.login(EMAIL, PASSWORD)}")
 # karma_normal, karma_golden = api.get_karma()
 # print(f"Karma: {karma_normal} normal, {karma_golden} golden")
 # print(f"Claiming karma successful: {api.claim_daily_karma()}")  # Idk why it doesn't claim them. It doesn't work. Maybe better like this tbh

@@ -11,8 +11,10 @@ def slugify(value, allow_unicode=False, lowercase=True):
     """
     value = str(value)
     if allow_unicode:
+        # noinspection SpellCheckingInspection
         value = unicodedata.normalize('NFKC', value)
     else:
+        # noinspection SpellCheckingInspection
         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value).strip()
     value = value.lower() if lowercase else value

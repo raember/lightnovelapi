@@ -3,29 +3,23 @@ from datetime import datetime, timezone
 
 from urllib3.util import parse_url
 
-from lightnovel.wuxiaworld import WuxiaWorldNovel, WuxiaWorldChapter, WuxiaWorldApi
-from tests.config import Har, resolve_path
-from webot import Firefox
-from webot.adapter import HarAdapter, load_har
+from lightnovel.wuxiaworld_com import WuxiaWorldComNovel, WuxiaWorldComChapter, WuxiaWorldComApi
+from tests.config import Har, prepare_browser
 # noinspection SpellCheckingInspection
-from wuxiaworld.api import Genre
+from wuxiaworld_com.api import Genre
 
 
-class WuxiaWorldApiHjcTest(unittest.TestCase):
+# noinspection SpellCheckingInspection,DuplicatedCode
+class WuxiaWorldComApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_HJC_COVER_C1_2)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        cls.browser.session.mount('https://', har_adapter)
-        cls.browser.session.mount('http://', har_adapter)
+        cls.browser = prepare_browser(Har.WW_HJC_COVER_C1_2)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         self.assertIsNotNone(novel)
-        self.assertTrue(isinstance(novel, WuxiaWorldNovel))
+        self.assertTrue(isinstance(novel, WuxiaWorldComNovel))
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
@@ -99,11 +93,11 @@ class WuxiaWorldApiHjcTest(unittest.TestCase):
         self.assertEqual(697, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         chapter = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01'))
         self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
@@ -147,11 +141,11 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
                          chapter.content.text)
 
     def test_parsing_chapter_2(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         chapter = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02'))
         self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
@@ -195,25 +189,20 @@ With a cold flash, the tip of the sword was resting on Zhou Weiqing’s throat, 
 
 
 # noinspection SpellCheckingInspection
-class WuxiaWorldApiWmwTest(unittest.TestCase):
+class WuxiaWorldComApiWmwTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_WMW_COVER_C1)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        cls.browser.session.mount('https://', har_adapter)
-        cls.browser.session.mount('http://', har_adapter)
+        cls.browser = prepare_browser(Har.WW_WMW_COVER_C1)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world'))
         self.assertIsNotNone(novel)
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertTrue(isinstance(novel, WuxiaWorldNovel))
+        self.assertTrue(isinstance(novel, WuxiaWorldComNovel))
         self.assertEqual('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world', str(novel.url))
         self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
         self.assertEqual('Warlock of the Magus World', novel.title)
@@ -261,11 +250,11 @@ class WuxiaWorldApiWmwTest(unittest.TestCase):
         self.assertEqual(157, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         chapter = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/warlock-of-the-magus-world/wmw-chapter-1'))
         self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
@@ -357,26 +346,22 @@ Still, he did not leave. No matter what, he still had to eat.
                          chapter.content.text)
 
 
-# noinspection SpellCheckingInspection
-class WuxiaWorldApiSFFTest(unittest.TestCase):
+# noinspection SpellCheckingInspection,DuplicatedCode
+class WuxiaWorldComApiSFFTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_SFF_Cover_C1_78F)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        cls.browser.session.mount('https://', har_adapter)
-        cls.browser.session.mount('http://', har_adapter)
+        cls.browser = prepare_browser(Har.WW_SFF_Cover_C1_78F)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/stop-friendly-fire'))
         self.assertIsNotNone(novel)
-        self.assertTrue(isinstance(novel, WuxiaWorldNovel))
+        self.assertTrue(isinstance(novel, WuxiaWorldComNovel))
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
+        self.assertFalse(novel.karma_active)
         self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
         self.assertEqual('/novel/stop-friendly-fire', novel.url.path)
         self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire', str(novel.alter_url()))
@@ -440,10 +425,10 @@ class WuxiaWorldApiSFFTest(unittest.TestCase):
         self.assertEqual(26, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         chapter = api.get_chapter(parse_url('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1'))
         self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
@@ -546,26 +531,21 @@ It only took around... 10 minutes before Lee Shin Woo figured out that this was 
 
 
 # noinspection SpellCheckingInspection
-class WuxiaWorldApiASTTest(unittest.TestCase):
+class WuxiaWorldComApiASTTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_AST_Cover_C1_102)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        cls.browser.session.mount('https://', har_adapter)
-        cls.browser.session.mount('http://', har_adapter)
+        cls.browser = prepare_browser(Har.WW_AST_Cover_C1_102)
 
     def test_parsing_novel(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique'))
         self.assertIsNotNone(novel)
-        self.assertTrue(isinstance(novel, WuxiaWorldNovel))
+        self.assertTrue(isinstance(novel, WuxiaWorldComNovel))
         self.assertFalse(novel.success)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertTrue(novel._karma_active)
+        self.assertTrue(novel.karma_active)
         self.assertEqual('https://www.wuxiaworld.com', str(novel.alter_url('')))
         self.assertEqual('/novel/ancient-strengthening-technique', novel.url.path)
         self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique', str(novel.alter_url()))
@@ -660,11 +640,11 @@ class WuxiaWorldApiASTTest(unittest.TestCase):
         self.assertEqual(700, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         chapter = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1'))
         self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
@@ -749,11 +729,11 @@ Editor: Ziltch
                          chapter.content.text)
 
     def test_parsing_chapter_101(self):
-        api = WuxiaWorldApi(self.browser)
+        api = WuxiaWorldComApi(self.browser)
         chapter = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101'))
         self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldChapter))
+        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
         self.assertFalse(chapter.success)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
@@ -771,27 +751,17 @@ Editor: Ziltch
 
 
 # noinspection SpellCheckingInspection
-class WuxiaWorldApiSearchTest(unittest.TestCase):
+class WuxiaWorldComApiSearchTest(unittest.TestCase):
     def test_search_default(self):
-        browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_SEARCH_DEFAULT)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        browser.session.mount('https://', har_adapter)
-        browser.session.mount('http://', har_adapter)
-        api = WuxiaWorldApi(browser)
+        browser = prepare_browser(Har.WW_SEARCH_DEFAULT)
+        api = WuxiaWorldComApi(browser)
         results, n = api.search()
         self.assertEqual(15, len(results))
         self.assertEqual(59, n)
 
     def test_search_modern(self):
-        browser = Firefox()
-        har_adapter = HarAdapter(load_har(resolve_path(Har.WW_SEARCH_MODERN)))
-        har_adapter.strict_matching = False
-        har_adapter.delete_after_match = False
-        browser.session.mount('https://', har_adapter)
-        browser.session.mount('http://', har_adapter)
-        api = WuxiaWorldApi(browser)
+        browser = prepare_browser(Har.WW_SEARCH_MODERN)
+        api = WuxiaWorldComApi(browser)
         results, n = api.search(genres=(Genre.MODERN_SETTING,))
         self.assertEqual(7, len(results))
         self.assertEqual(7, n)
