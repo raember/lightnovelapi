@@ -27,6 +27,8 @@ class Har:
     WW_SEARCH = (*data_folder, 'WW_Search.har')
     WW_SEARCH_DEFAULT = (*data_folder, 'WW_Search_default.har')
     WW_SEARCH_MODERN = (*data_folder, 'WW_Search_modern.har')
+    WM_SEARCH_RI_C1_5 = (*data_folder, 'webnovel_Search_RI_C1-5.har')
+    WM_POTT_C92_95 = (*data_folder, 'webnovel_POTT_C92-95.har')
 
 
 def prepare_browser(har_path: Tuple) -> Browser:

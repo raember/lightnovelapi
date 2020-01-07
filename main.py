@@ -37,9 +37,7 @@ api = WuxiaWorldComApi(browser)
 # print(f"Karma: {karma_normal} normal, {karma_golden} golden")
 # print(f"Logout successful: {api.logout()}")
 
-lst, n = api.search(count=200)
-if n > len(lst):
-    print(f"Not all matches returned. {n} Matches search, but only {len(lst)} got returned.")
+lst = api.search(count=200)
 # URLS = [
 #     # 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world',
 #     # 'https://www.wuxiaworld.com/novel/heavenly-jewel-change',

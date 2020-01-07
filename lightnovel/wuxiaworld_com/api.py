@@ -4,8 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Tuple
 
-# noinspection PyProtectedMember
-from bs4 import BeautifulSoup, Tag, NavigableString
+from bs4 import BeautifulSoup
+from bs4.element import Tag, NavigableString
 from spoofbot.adapter import CacheAdapter
 from spoofbot.util import encode_form_data
 from urllib3.util.url import parse_url, Url
@@ -384,7 +384,7 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
             sort_by: SortType = SortType.NAME,
             sort_asc: bool = True,
             search_after: int = None,
-            count: int = 15) -> Tuple[List[WuxiaWorldComSearchEntry], int]:
+            count: int = 15) -> List[WuxiaWorldComSearchEntry]:
         """Searches for novels matching certain criteria. Violates robots.txt
 
         :param title: The title or abbreviation to search for.
@@ -424,7 +424,7 @@ class WuxiaWorldComApi(WuxiaWorldCom, LightNovelApi):
         entries = []
         for item in data['items']:
             entries.append(WuxiaWorldComSearchEntry(item))
-        return entries, int(data['total'])
+        return entries
 
     def fetch_session_cookie_if_necessary(self):
         if not self._browser.session.cookies.get('__cfduid'):
