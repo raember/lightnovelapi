@@ -1,6 +1,7 @@
 import unittest
 from datetime import datetime, timezone
 
+from requests.cookies import RequestsCookieJar
 from urllib3.util import parse_url
 
 from lightnovel.wuxiaworld_com import WuxiaWorldComNovel, WuxiaWorldComChapter, WuxiaWorldComApi
@@ -755,11 +756,13 @@ class WuxiaWorldComApiSearchTest(unittest.TestCase):
     def test_search_default(self):
         browser = prepare_browser(Har.WW_SEARCH_DEFAULT)
         api = WuxiaWorldComApi(browser)
+        browser.session.cookies = RequestsCookieJar()
         results = api.search()
         self.assertEqual(15, len(results))
 
     def test_search_modern(self):
         browser = prepare_browser(Har.WW_SEARCH_MODERN)
         api = WuxiaWorldComApi(browser)
+        browser.session.cookies = RequestsCookieJar()
         results = api.search(genres=(Genre.MODERN_SETTING,))
         self.assertEqual(7, len(results))

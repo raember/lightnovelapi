@@ -12,7 +12,7 @@ from PIL import Image
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from spoofbot import Browser, Firefox
-from spoofbot.adapter import CacheAdapter
+from spoofbot.adapter import CacheAdapter, HarAdapter
 from urllib3.util import parse_url, Url
 
 from util.text import slugify
@@ -343,7 +343,7 @@ class LightNovelApi(ABC):
         self._browser = browser
         self._last_request_timestamp = datetime(1, 1, 1)
         self._request_delay = delay
-        if not isinstance(browser.session.get_adapter('https://'), CacheAdapter):
+        if type(browser.session.get_adapter('https://')) not in [CacheAdapter, HarAdapter]:
             self.log.warning("Not using a CacheAdapter will take a long time for every run.")
 
     @property
@@ -399,13 +399,13 @@ class LightNovelApi(ABC):
         """
         return Novel(url, self._get_document(url))
 
-    def get_image(self, url: str) -> Image.Image:
+    def get_image(self, url: Url) -> Image.Image:
         """
         Downloads an image from a url.
         :param url: The url of the image.
         :return: An image object representation.
         """
-        response = self._browser.get(str(url))
+        response = self._browser.get(url.url)
         self._last_request_timestamp = datetime.now()
         return Image.open(BytesIO(response.content))
 

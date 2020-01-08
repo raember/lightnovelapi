@@ -2,9 +2,10 @@ import logging
 
 from spoofbot import Firefox
 from spoofbot.adapter import CacheAdapter
+from urllib3.util import parse_url
 
 from pipeline import EpubMaker, Parser, DeleteChapters
-from wuxiaworld_com import WuxiaWorldComApi
+from webnovel_com import WebNovelComApi
 
 # from settings import EMAIL, PASSWORD
 
@@ -27,7 +28,12 @@ browser.session.mount('https://', cache)
 browser.session.mount('http://', cache)
 
 # Make it
-api = WuxiaWorldComApi(browser)
+# api = WuxiaWorldComApi(browser)
+# lst = api.search(count=200)
+# urls = list(map(lambda i: i.url, lst[16:]))
+
+api = WebNovelComApi(browser)
+urls = [parse_url('https://www.webnovel.com/book/7853880705001905')]
 
 # print(f"Login successful: {api.login(EMAIL, PASSWORD)}")
 # karma_normal, karma_golden = api.get_karma()
@@ -37,27 +43,7 @@ api = WuxiaWorldComApi(browser)
 # print(f"Karma: {karma_normal} normal, {karma_golden} golden")
 # print(f"Logout successful: {api.logout()}")
 
-lst = api.search(count=200)
-# URLS = [
-#     # 'https://www.wuxiaworld.com/novel/warlock-of-the-magus-world',
-#     # 'https://www.wuxiaworld.com/novel/heavenly-jewel-change',
-#     # 'https://www.wuxiaworld.com/novel/martial-world',
-#     # 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms',
-#     # 'https://www.wuxiaworld.com/novel/i-shall-seal-the-heavens',
-#     # 'https://www.wuxiaworld.com/novel/stellar-transformations',
-#     # 'https://www.wuxiaworld.com/novel/a-will-eternal',
-#     # 'https://www.wuxiaworld.com/novel/battle-through-the-heavens',
-#     # 'https://www.wuxiaworld.com/novel/i-reincarnated-for-nothing',
-#     # 'https://www.wuxiaworld.com/novel/the-divine-elements',
-#     # 'https://www.wuxiaworld.com/novel/wu-dong-qian-kun',
-#     # 'https://www.wuxiaworld.com/novel/the-sword-and-the-shadow',
-#     # 'https://www.wuxiaworld.com/novel/ancient-strengthening-technique',
-#     # 'https://www.wuxiaworld.com/novel/renegade-immortal',
-#     # 'https://www.wuxiaworld.com/novel/perfect-world'
-#     'https://www.wuxiaworld.com/novel/the-unrivaled-tang-sect'
-# ]
 newly_fetched = {}
-urls = list(map(lambda i: i.url, lst[16:]))
 for url in urls:
     # Rip,
     novel, gen = api.get_entire_novel(url)

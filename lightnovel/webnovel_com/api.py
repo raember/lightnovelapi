@@ -2,7 +2,7 @@ import html
 import json
 import re
 from datetime import datetime
-from typing import List
+from typing import List, Generator, Tuple
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
@@ -77,10 +77,10 @@ class WebNovelComNovel(WebNovelCom, Novel):
         head = self._document.select_one('head')
         if not isinstance(head, Tag):
             raise Exception("Unexpected type of tag selection")
-        meta_image = head.select_one('meta[property="og:image"]')
-        if not isinstance(meta_image, Tag):
-            raise Exception("Unexpected type of tag selection")
-        self._cover_url = meta_image.get('content')
+        # meta_image = head.select_one('meta[property="og:image"]')
+        # if not isinstance(meta_image, Tag):
+        #     raise Exception("Unexpected type of tag selection")
+        # self._cover_url = meta_image.get('content')
         url = head.select_one('meta[property="og:url"]')
         if not isinstance(url, Tag):
             raise Exception("Unexpected type of tag selection")
@@ -107,10 +107,8 @@ class WebNovelComNovel(WebNovelCom, Novel):
         self._author = json_data['authorName']
         self._translator = json_data['translatorItems'][0]['name']
         cover_update_time = datetime.fromtimestamp(float(json_data['coverUpdateTime']) / 1000)
-        self._cover_url = parse_url(
-            f'https://img.webnovel.com/bookcover/{self._novel_id}/300/300.jpg'
-            f'?coverUpdateTime={int(cover_update_time.timestamp() * 1000)}'
-        )
+        self._cover_url = f'https://img.webnovel.com/bookcover/{self._novel_id}/300/300.jpg' \
+                          f'?coverUpdateTime={int(cover_update_time.timestamp() * 1000)}'
         self._tags = list(map(lambda i: i['tagName'], json_data['tagInfo']['popularItems']))
         self._release_date = datetime.fromtimestamp(0)
 
@@ -236,7 +234,8 @@ class WebNovelComChapter(WebNovelCom, Chapter):
         return True
 
     def is_complete(self) -> bool:
-        return not self.is_vip
+        # Because the pipeline checks for this and we want to continue to Qidian Underground
+        return True  # not self.is_vip
 
     def clean_content(self):
         pass
@@ -244,7 +243,7 @@ class WebNovelComChapter(WebNovelCom, Chapter):
     @staticmethod
     def build_url(csrf_token: str, book_id: int, chapter_id: int, timestamp: datetime = datetime.now()) -> Url:
         # noinspection SpellCheckingInspection
-        return Url('https://', host='www.webnovel.com', path='/apiajax/chapter/GetContent',
+        return Url('https', host='www.webnovel.com', path='/apiajax/chapter/GetContent',
                    query='&'.join([f"{k}={v}" for k, v in {
                        '_csrfToken': csrf_token,
                        'bookId': book_id,
@@ -260,6 +259,7 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
     def get_chapter(self, url: Url) -> WebNovelComChapter:
         if isinstance(self.adapter, CacheAdapter):
             self.adapter.use_cache = False
+        self.check_wait_condition()
         response = self._browser.navigate(url.url, headers={
             'Accept': 'application/json, text/javascript, */*; q=0.01',
             'Upgrade-Insecure-Requests': None,
@@ -310,3 +310,31 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
             if isinstance(self.adapter, CacheAdapter):
                 self.adapter.use_cache = True
         # assert self._browser.session.cookies.get('__cfduid')  # Messes up tests with cache that don't store headers
+
+    def get_all_chapters(self, novel: WebNovelComNovel) -> Generator[Tuple[Book, Chapter], None, None]:
+        """
+        Creates a generator that downloads all the available chapters of a novel, including
+        those that aren't listed on the front page of the novel.
+
+        The generator can be fed into various pipelines.
+        :param novel: The novel from which the chapters should be downloaded. Has to be parsed already.
+        :return: A generator that downloads each chapter.
+        """
+        book = None
+        for book, chapter_entry in novel.enumerate_chapter_entries():
+            chapter = self.get_chapter(chapter_entry.url)
+            chapter.index = chapter_entry.index
+            yield book, chapter
+            if not chapter.success:
+                raise Exception("Cannot decide whether to continue because pay wall cannot be detected")
+            if chapter.is_vip:
+                break
+        self.log.info("Continuing downloading chapters from Qidian Underground.")
+        from qidianunderground_org import QidianUndergroundOrgApi
+        api = QidianUndergroundOrgApi(self.browser)
+        qidian_novel = api.get_novel(novel.title)
+        qidian_novel.parse()
+        for index in qidian_novel.index_to_chapter_entry.keys():
+            chapter = api.get_chapter(index)
+            chapter.index = index
+            yield book, chapter
