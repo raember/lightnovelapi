@@ -11,9 +11,9 @@ from webnovel_com import WebNovelComApi
 
 # noinspection SpellCheckingInspection
 logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(name)18s: %(message)s',
+    format='%(asctime)s %(levelname)-8s %(name)23s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO
+    level=logging.DEBUG
 )
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 # noinspection SpellCheckingInspection

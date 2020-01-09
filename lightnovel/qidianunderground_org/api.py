@@ -155,11 +155,16 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
         entry = self._novel.index_to_chapter_entry[index]
         url = Url('https', host=entry.url.hostname, path=entry.url.path, query=entry.url.query)
         if entry.url not in self._novel.link_to_document:
+            if isinstance(self.adapter, CacheAdapter):
+                self.adapter.use_cache = False
             self.check_wait_condition()
             response = self._browser.post(url.url, headers={
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
                 'X-Requested-With': 'JSONHttpRequest'
             })
             self._last_request_timestamp = datetime.now()
+            if isinstance(self.adapter, CacheAdapter):
+                self.adapter.use_cache = True
             if not response.text.startswith('{'):
                 raise Exception(f"Private bin seems to be down: {entry.url}")
             json_data = response.json()
