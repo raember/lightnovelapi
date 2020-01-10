@@ -12,6 +12,7 @@ from spoofbot.util import encode_form_data
 from urllib3.util.url import parse_url, Url
 
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, SearchEntry
+from util.other import query_to_dict
 
 
 def unescape_string(string: str) -> str:
@@ -101,11 +102,15 @@ class WebNovelComNovel(WebNovelCom, Novel):
         if not match:
             raise Exception("Failed to match for json data")
         json_str = match.group('json')
-        json_str = json_str.replace(r'\ ', ' ').replace(r"\'", "'")
+        json_str = json_str.replace(r'\ ', ' ').replace(r"\'", "'").replace(r"\>", ">")
         json_data = json.loads(json_str)['bookInfo']
         self._language = 'en'
         self._author = json_data['authorName']
-        self._translator = json_data['translatorItems'][0]['name']
+        translators = json_data.get('translatorItems', [])
+        if translators is not None and len(translators) > 0:
+            self._translator = translators[0]['name']
+        else:
+            self._translator = ''
         cover_update_time = datetime.fromtimestamp(float(json_data['coverUpdateTime']) / 1000)
         self._cover_url = f'https://img.webnovel.com/bookcover/{self._novel_id}/300/300.jpg' \
                           f'?coverUpdateTime={int(cover_update_time.timestamp() * 1000)}'
@@ -114,7 +119,9 @@ class WebNovelComNovel(WebNovelCom, Novel):
 
         adapter = self._browser.session.get_adapter('https://')
         if isinstance(adapter, CacheAdapter):
-            adapter.use_cache = False
+            adapter.next_request_cache_url = parse_url(
+                f"https://www.webnovel.com/apiajax/chapter/{self._novel_id}.html"
+            )
         # noinspection SpellCheckingInspection
         chapter_list_url = Url('https', host='www.webnovel.com', path='/apiajax/chapter/GetChapterList')
         response = self._browser.get(chapter_list_url.url, params={
@@ -122,8 +129,6 @@ class WebNovelComNovel(WebNovelCom, Novel):
             'bookId': self._novel_id,
             '_': int(self._timestamp.timestamp() * 1000),
         })
-        if isinstance(adapter, CacheAdapter):
-            adapter.use_cache = True
         json_data = response.json()['data']
         book_info = json_data['bookInfo']
         self._title = book_info['bookName']
@@ -203,7 +208,11 @@ class WebNovelComChapter(WebNovelCom, Chapter):
         book_info = data['bookInfo']
         self._language = book_info['languageName']
         self._author = book_info['authorName']
-        self._translator = book_info['translatorItems'][0]['name']
+        translators = book_info.get('translatorItems', [])
+        if translators is not None and len(translators) > 0:
+            self._translator = translators[0]['name']
+        else:
+            self._translator = ''
         chapter_info = data['chapterInfo']
         self._chapter_id = int(chapter_info['chapterId'])
         self._title = chapter_info['chapterName']
@@ -254,11 +263,16 @@ class WebNovelComChapter(WebNovelCom, Chapter):
 
 class WebNovelComApi(WebNovelCom, LightNovelApi):
     def get_novel(self, url: Url) -> WebNovelComNovel:
+        self.fetch_session_cookie_if_necessary()
         return WebNovelComNovel(url, self._get_document(url), self._browser)
 
     def get_chapter(self, url: Url) -> WebNovelComChapter:
         if isinstance(self.adapter, CacheAdapter):
-            self.adapter.use_cache = False
+            query = query_to_dict(url.query)
+            self.adapter.next_request_cache_url = parse_url(
+                f"https://www.webnovel.com/apiajax/chapter/{query['bookId']}/{query['chapterId']}.html"
+            )
+        self.fetch_session_cookie_if_necessary()
         self.check_wait_condition()
         response = self._browser.navigate(url.url, headers={
             'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -266,8 +280,6 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
             'X-Requested-With': 'XMLHttpRequest',
         })
         self._last_request_timestamp = datetime.now()
-        if isinstance(self.adapter, CacheAdapter):
-            self.adapter.use_cache = True
         response.encoding = None  # Figure out correct encoding yourself
         return WebNovelComChapter(url, response.json(), self._browser.session.cookies.get('_csrfToken'))
 
@@ -333,7 +345,11 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
         from qidianunderground_org import QidianUndergroundOrgApi
         api = QidianUndergroundOrgApi(self.browser)
         qidian_novel = api.get_novel(novel.title)
-        qidian_novel.parse()
+        try:
+            qidian_novel.parse()
+        except LookupError:
+            self.log.error("Could not find novel on Qidian Underground.")
+            return
         for index in qidian_novel.index_to_chapter_entry.keys():
             chapter = api.get_chapter(index)
             chapter.index = index

@@ -12,10 +12,11 @@ Currently supported hosters:
 
 - [www.wuxiaworld.com](https://www.wuxiaworld.com/)
 - [www.webnovel.com](https://www.webnovel.com/)
+- [toc.qidianunderground.org](https://toc.qidianunderground.org/) (completes webnovel)
 
 Planned hosters to be supported (found through ducking and [fullnovels.com](https://fullnovels.com/)):
 
-- [toc.qidianunderground.org](https://toc.qidianunderground.org/) (completes webnovel)
+- [novelonlinefull.com](https://novelonlinefull.com/)
 - [gravitytales.com](http://gravitytales.com/)
 - [www.volarenovels.com](https://www.volarenovels.com/)
 - [creativenovels.com](https://creativenovels.com/)
