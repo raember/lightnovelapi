@@ -327,6 +327,9 @@ class Chapter(LightNovelPage, ABC):
 class SearchEntry(LightNovelEntity):
     title: str
 
+    def __str__(self):
+        return self.title
+
 
 class LightNovelApi(ABC):
     _hostname: str
@@ -387,7 +390,7 @@ class LightNovelApi(ABC):
         """
         self.check_wait_condition()
         kwargs.setdefault('headers', {}).setdefault('Accept', 'text/html')
-        response = self._browser.navigate(str(url), **kwargs)
+        response = self._browser.navigate(url.url, **kwargs)
         self._last_request_timestamp = datetime.now()
         return BeautifulSoup(response.text, features="html5lib")
 
@@ -459,12 +462,16 @@ class LightNovelApi(ABC):
             chapter = self.get_chapter(chapter_entry.url)
             chapter.index = chapter_entry.index
             yield book, chapter
+            if not chapter.success:
+                return
         while chapter.success and chapter.next_chapter:
             chapter_index += 1
             self.log.debug(f"Following existing next chapter link({chapter.next_chapter}).")
             chapter = self.get_chapter(chapter.next_chapter)
             chapter.index = chapter_index
             yield book, chapter
+            if not chapter.success:
+                return
 
     def check_wait_condition(self):
         """

@@ -9,6 +9,7 @@ from urllib3.util.url import parse_url, Url
 
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, SearchEntry
 from util.privatebin import decrypt
+from util.text import unescape_string
 
 
 class QidianUndergroundOrg:
@@ -85,7 +86,7 @@ class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
         if not isinstance(content_div, Tag):
             raise Exception("Unexpected type of tag selection")
         for tag in content_div.contents:
-            if next_is_chapter_list and tag.name == 'ul':
+            if next_is_chapter_list and isinstance(tag, Tag) and tag.name == 'ul':
                 return tag.select('a')
             next_is_chapter_list |= (tag.name == 'p' and tag.next.strip() == self._title)
         raise LookupError(f"'{self._title}' not found in HTML content")
@@ -94,6 +95,21 @@ class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
 class QidianUndergroundOrgBook(QidianUndergroundOrg, Book):
     _chapter_entries: List[QidianUndergroundOrgChapterEntry] = []
     _chapters: List['QidianUndergroundOrgChapter'] = []
+
+
+class QidianUndergroundOrgSearchEntry(QidianUndergroundOrg, SearchEntry):
+    title: str
+    complete: bool
+
+    def __init__(self, title: str, complete: bool):
+        super().__init__(Url('https', host=self._hostname, path='/'))
+        self.title = title
+        self.complete = complete
+
+    def __str__(self):
+        if self.complete:
+            return f"{self.title} (Complete)"
+        return self.title
 
 
 class QidianUndergroundOrgChapter(QidianUndergroundOrg, Chapter):
@@ -106,6 +122,8 @@ class QidianUndergroundOrgChapter(QidianUndergroundOrg, Chapter):
 
     def parse(self) -> bool:
         self._content = self._select_html()
+        if self._content is None:
+            return False
         self._title = str(self._content.select_one('h2').next)
         self._language = 'en'
         self._previous_chapter_path = ''
@@ -117,7 +135,7 @@ class QidianUndergroundOrgChapter(QidianUndergroundOrg, Chapter):
         for div in self._document.select('body div.input-group.text-justify.center-block.col-md-8.col-md-offset-2'):
             if div.get('id').endswith(f"chapter-{self._index}"):
                 return div
-        raise LookupError("Could not match chapter by index")
+        self.log.error(f"Could not find chapter {self._index}")
 
     def is_complete(self) -> bool:
         return True
@@ -139,6 +157,11 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
         self._novel = value
 
     def get_novel(self, title: str) -> QidianUndergroundOrgNovel:
+        self._populate_main_document()
+        self._novel = QidianUndergroundOrgNovel(title, self._document)
+        return self._novel
+
+    def _populate_main_document(self):
         if not self._document:
             if isinstance(self.adapter, CacheAdapter):
                 self.adapter.use_cache = True
@@ -147,8 +170,6 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
                 if not self.adapter.hit:
                     raise Exception("Cannot get data from raw website. "
                                     "Please copy to cache by hand and name it '.html'")
-        self._novel = QidianUndergroundOrgNovel(title, self._document)
-        return self._novel
 
     def get_chapter(self, index: int) -> QidianUndergroundOrgChapter:
         if not self._novel:
@@ -161,6 +182,7 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
                 self.adapter.next_request_cache_url = parse_url(
                     f"https://{entry.url.hostname}/{paste_id}.html"
                 )
+            # noinspection SpellCheckingInspection
             if entry.url.hostname == 'priv.atebin.com':
                 url = Url('https', host=entry.url.hostname, path=entry.url.path, query=entry.url.query)
                 self.check_wait_condition()
@@ -169,6 +191,7 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
                     'X-Requested-With': 'JSONHttpRequest'
                 })
             elif entry.url.hostname == 'paste.tech-port.de':
+                # noinspection SpellCheckingInspection
                 url = Url('https', host=entry.url.hostname, path=entry.url.path, query=f"pasteid={paste_id}")
                 self.check_wait_condition()
                 self._browser.session.cookies.set_cookie(
@@ -181,12 +204,29 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
                 raise Exception(f"Unknown privatebin hoster {entry.url.url}")
             self._last_request_timestamp = datetime.now()
             if not response.text.startswith('{'):
+                self.adapter.delete_last()
                 raise Exception(f"Private bin seems to be down: {entry.url.url}")
             json_data = response.json()
             assert json_data['id'] == paste_id
             self._novel.link_to_document[entry.url] = BeautifulSoup(decrypt(entry.url, json_data), features="html5lib")
         return QidianUndergroundOrgChapter(entry.url, self._novel.link_to_document[entry.url], index)
 
-    def search(self) -> List[SearchEntry]:
-        raise NotImplementedError(
-            "Qidian Underground does not support any sort of search. Please use get_novel instead.")
+    def search(self, title: str = '', complete: bool = None) -> List[QidianUndergroundOrgSearchEntry]:
+        self._populate_main_document()
+        entries = []
+        tag: Tag
+        for tag in self._document.select('div.content p'):
+            novel_title: str = tag.next.strip()
+            next_content = tag.contents[1]
+            novel_complete = (
+                    isinstance(next_content, Tag) and
+                    next_content.name == 'strong' and
+                    next_content.next == '(Completed)'
+            )
+            if title in novel_title:
+                if not complete or complete and complete == novel_complete:
+                    entries.append(QidianUndergroundOrgSearchEntry(
+                        unescape_string(novel_title),
+                        novel_complete
+                    ))
+        return entries

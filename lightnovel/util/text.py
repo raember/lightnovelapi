@@ -29,3 +29,7 @@ def sanitize_for_html(string: str) -> str:
     :return: The sanitized string.
     """
     return html.escape(string.replace("&", "&amp;"))
+
+
+def unescape_string(string: str) -> str:
+    return string.encode('utf8').decode('unicode-escape').replace(r'\'', '')  # .replace(r"\'", "'").replace('\"', '"')

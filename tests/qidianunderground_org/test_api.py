@@ -19,12 +19,12 @@ class QidianUndergroundOrgPoTTest(unittest.TestCase):
         cls.cache_adapter = CacheAdapter(resolve_path('.cache'))
         # Get the csrf cookie
         cls.browser.navigate('https://priv.atebin.com/?6c99d1587fbaa9f3#Asinaz5DNFrNdXigVjPskMTpX/xWhTvgyvRUHLAqYgg=')
+        cls.api = QidianUndergroundOrgApi(cls.browser)
 
     def test_parsing_novel(self):
-        api = QidianUndergroundOrgApi(self.browser)
         self.browser.session.mount('https://', self.cache_adapter)
         self.browser.session.mount('http://', self.cache_adapter)
-        novel = api.get_novel('Pursuit of the Truth')
+        novel = self.api.get_novel('Pursuit of the Truth')
         self.browser.session.mount('https://', self.har_adapter)
         self.browser.session.mount('http://', self.har_adapter)
         self.assertIsNotNone(novel)
@@ -34,13 +34,12 @@ class QidianUndergroundOrgPoTTest(unittest.TestCase):
         self.assertTrue(novel.success)
 
     def test_parsing_chapter(self):
-        api = QidianUndergroundOrgApi(self.browser)
         self.browser.session.mount('https://', self.cache_adapter)
         self.browser.session.mount('http://', self.cache_adapter)
-        api.get_novel('Pursuit of the Truth').parse()  # Cache novel as active
+        self.api.get_novel('Pursuit of the Truth').parse()  # Cache novel as active
         self.browser.session.mount('https://', self.har_adapter)
         self.browser.session.mount('http://', self.har_adapter)
-        chapter = api.get_chapter(94)
+        chapter = self.api.get_chapter(94)
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, QidianUndergroundOrgChapter))
         self.assertFalse(chapter.success)

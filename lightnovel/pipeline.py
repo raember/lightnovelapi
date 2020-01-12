@@ -45,7 +45,6 @@ class Parser(Pipeline):
                     self.log.warning("Chapter not complete.")
                     if isinstance(self._adapter, CacheAdapter):
                         self._adapter.delete_last()
-                    return
 
 
 class HtmlCleaner(Pipeline):

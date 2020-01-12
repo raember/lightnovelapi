@@ -6,6 +6,7 @@ from typing import List, Generator, Tuple
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from requests.cookies import create_cookie
 from spoofbot import Browser
 from spoofbot.adapter import CacheAdapter
 from spoofbot.util import encode_form_data
@@ -13,10 +14,6 @@ from urllib3.util.url import parse_url, Url
 
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, SearchEntry
 from util.other import query_to_dict
-
-
-def unescape_string(string: str) -> str:
-    return string.encode('utf8').decode('unicode-escape')
 
 
 class WebNovelCom:
@@ -102,7 +99,8 @@ class WebNovelComNovel(WebNovelCom, Novel):
         if not match:
             raise Exception("Failed to match for json data")
         json_str = match.group('json')
-        json_str = json_str.replace(r'\ ', ' ').replace(r"\'", "'").replace(r"\>", ">")
+        json_str = re.sub(r"\\([^nr\"])", r"\1", json_str)
+        # json_str = json_str.replace('\\', '')  # .replace(r"\'", "'").replace(r"\>", ">").replace(r'\&', '&')
         json_data = json.loads(json_str)['bookInfo']
         self._language = 'en'
         self._author = json_data['authorName']
@@ -243,8 +241,7 @@ class WebNovelComChapter(WebNovelCom, Chapter):
         return True
 
     def is_complete(self) -> bool:
-        # Because the pipeline checks for this and we want to continue to Qidian Underground
-        return True  # not self.is_vip
+        return not self.is_vip
 
     def clean_content(self):
         pass
@@ -262,6 +259,17 @@ class WebNovelComChapter(WebNovelCom, Chapter):
 
 
 class WebNovelComApi(WebNovelCom, LightNovelApi):
+    from qidianunderground_org import QidianUndergroundOrgApi
+    _qidian_underground_api: QidianUndergroundOrgApi
+
+    @property
+    def qidian_underground_api(self) -> QidianUndergroundOrgApi:
+        return self._qidian_underground_api
+
+    @qidian_underground_api.setter
+    def qidian_underground_api(self, value: QidianUndergroundOrgApi):
+        self._qidian_underground_api = value
+
     def get_novel(self, url: Url) -> WebNovelComNovel:
         self.fetch_session_cookie_if_necessary()
         return WebNovelComNovel(url, self._get_document(url), self._browser)
@@ -295,8 +303,15 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
             self.adapter.use_cache = False
         data = [
             ('_csrfToken', self._browser.session.cookies.get('_csrfToken')),
-            ('keyword', keyword)
+            ('keywords', keyword)
         ]
+        # These cookies aren't needed, but makes spoofing more believable
+        self._browser.session.cookies.set_cookie(create_cookie('e1', '{"pid":"qi_p_home","eid":"qi_A02","l1":"99"}',
+                                                               domain='.webnovel.com', path='/'))
+        # noinspection SpellCheckingInspection
+        self._browser.session.cookies.set_cookie(create_cookie('e2', '',
+                                                               # '{"pid":"qi_p_googleonetap","eid":"qi_I01","l1":1}',
+                                                               domain='.webnovel.com', path='/'))
         response = self._browser.post("https://www.webnovel.com/apiajax/search/AutoCompleteAjax", headers={
             'Accept': 'application/json, text/javascript, */*; q=0.01',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -309,7 +324,7 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
         data = response.json()
         assert data['msg'] == 'Success'
         entries = []
-        for item in data['data'].get('books', []):
+        for item in data.get('data', {}).get('books', []):
             entries.append(WebNovelComSearchEntry(item))
         return entries
 
@@ -341,16 +356,18 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
                 raise Exception("Cannot decide whether to continue because pay wall cannot be detected")
             if chapter.is_vip:
                 break
-        self.log.info("Continuing downloading chapters from Qidian Underground.")
-        from qidianunderground_org import QidianUndergroundOrgApi
-        api = QidianUndergroundOrgApi(self.browser)
-        qidian_novel = api.get_novel(novel.title)
+        self.log.info("Continuing to download chapters from Qidian Underground.")
+        if not self._qidian_underground_api:
+            from qidianunderground_org import QidianUndergroundOrgApi
+            self._qidian_underground_api = QidianUndergroundOrgApi(self.browser)
+        qidian_novel = self._qidian_underground_api.get_novel(novel.title)
         try:
+            # TODO: Convert book structure of webnovel to qidian underground
             qidian_novel.parse()
         except LookupError:
             self.log.error("Could not find novel on Qidian Underground.")
             return
         for index in qidian_novel.index_to_chapter_entry.keys():
-            chapter = api.get_chapter(index)
+            chapter = self._qidian_underground_api.get_chapter(index)
             chapter.index = index
             yield book, chapter
