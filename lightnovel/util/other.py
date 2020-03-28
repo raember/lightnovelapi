@@ -13,3 +13,7 @@ def query_to_dict(query: str) -> Dict[str, str]:
         key, value = tuple(entry.split('='))
         dic[key] = value
     return dic
+
+
+def dict_to_query(dic: dict) -> str:
+    return '&'.join([f"{k}={v}" for k, v in dic.items()])

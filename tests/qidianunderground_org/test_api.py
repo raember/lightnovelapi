@@ -1,8 +1,7 @@
 import logging
 import unittest
 
-# noinspection DuplicatedCode,SpellCheckingInspection
-from spoofbot.adapter import CacheAdapter
+from spoofbot.adapter import FileCacheAdapter, HarAdapter
 
 from qidianunderground_org import QidianUndergroundOrgApi, QidianUndergroundOrgChapter, QidianUndergroundOrgNovel
 from tests.config import prepare_browser, Har, resolve_path
@@ -15,30 +14,29 @@ class QidianUndergroundOrgPoTTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.browser = prepare_browser(Har.QU_POT_C94_108)
-        cls.har_adapter = cls.browser.session.get_adapter('https://')
-        cls.cache_adapter = CacheAdapter(resolve_path('.cache'))
+        cls.har_adapter = cls.browser.adapter
+        if isinstance(cls.har_adapter, HarAdapter):
+            cls.har_adapter.match_header_order = False
+            cls.har_adapter.match_headers = False
+            cls.har_adapter.match_data = False
+            cls.har_adapter.delete_after_matching = False
+        cls.file_cache_adapter = FileCacheAdapter(resolve_path('.cache'))
         # Get the csrf cookie
         cls.browser.navigate('https://priv.atebin.com/?6c99d1587fbaa9f3#Asinaz5DNFrNdXigVjPskMTpX/xWhTvgyvRUHLAqYgg=')
         cls.api = QidianUndergroundOrgApi(cls.browser)
 
     def test_parsing_novel(self):
-        self.browser.session.mount('https://', self.cache_adapter)
-        self.browser.session.mount('http://', self.cache_adapter)
+        self.browser.adapter = self.file_cache_adapter
         novel = self.api.get_novel('Pursuit of the Truth')
-        self.browser.session.mount('https://', self.har_adapter)
-        self.browser.session.mount('http://', self.har_adapter)
+        self.browser.adapter = self.har_adapter
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, QidianUndergroundOrgNovel))
-        self.assertFalse(novel.success)
-        self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
 
     def test_parsing_chapter(self):
-        self.browser.session.mount('https://', self.cache_adapter)
-        self.browser.session.mount('http://', self.cache_adapter)
+        self.browser.adapter = self.file_cache_adapter
         self.api.get_novel('Pursuit of the Truth').parse()  # Cache novel as active
-        self.browser.session.mount('https://', self.har_adapter)
-        self.browser.session.mount('http://', self.har_adapter)
+        self.browser.adapter = self.har_adapter
         chapter = self.api.get_chapter(94)
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, QidianUndergroundOrgChapter))
@@ -47,12 +45,9 @@ class QidianUndergroundOrgPoTTest(unittest.TestCase):
         self.assertTrue(chapter.success)
         self.assertEqual('https://priv.atebin.com/?6c99d1587fbaa9f3#Asinaz5DNFrNdXigVjPskMTpX/xWhTvgyvRUHLAqYgg=',
                          chapter.url.url)
-        self.assertEqual('https://priv.atebin.com', chapter.alter_url('').url)
+        self.assertEqual('https://priv.atebin.com', chapter.change_url(path=None, query=None, fragment=None).url)
         self.assertEqual('Chapter 94: The Fourth Arrow!', chapter.title)
         self.assertEqual('The Fourth Arrow!', chapter.extract_clean_title())
-        self.assertEqual('en', chapter.language)
-        self.assertIsNone(chapter.author)
-        self.assertIsNone(chapter.translator)
         self.assertTrue(chapter.is_complete())
         self.assertIsNone(chapter.previous_chapter)
         self.assertIsNone(chapter.next_chapter)

@@ -1,5 +1,6 @@
 import unittest
 
+from spoofbot.adapter import HarAdapter
 from urllib3.util import parse_url
 
 import lightnovel.util as util
@@ -13,10 +14,16 @@ class HJCSinkTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.browser = prepare_browser(Har.WW_HJC_COVER_C1_2)
+        adapter = cls.browser.adapter
+        if isinstance(adapter, HarAdapter):
+            adapter.match_header_order = False
+            adapter.match_headers = False
+            adapter.match_data = False
+            adapter.delete_after_matching = False
 
     def test_parsing_hjc_description_as_string(self):
         api = WuxiaWorldComApi(self.browser)
-        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
+        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         self.assertTrue(novel.parse())
         description = util.StringHtmlSink().parse(novel.description)
@@ -36,7 +43,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
 
     def test_parsing_hjc_description_as_markdown(self):
         api = WuxiaWorldComApi(self.browser)
-        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
+        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         self.assertTrue(novel.parse())
         description = util.MarkdownHtmlSink().parse(novel.description)
         self.assertEqual("""_[Zen’s Synopsis]_
@@ -66,7 +73,7 @@ Our MC here is an archer who has such a pair of Heavenly Jewels.""",
 
     def test_parsing_hjc_description_as_latex(self):
         api = WuxiaWorldComApi(self.browser)
-        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
+        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         self.assertTrue(novel.parse())
         description = util.LatexHtmlSink().parse(novel.description)

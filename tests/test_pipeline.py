@@ -1,5 +1,6 @@
 import unittest
 
+from spoofbot.adapter import HarAdapter
 from urllib3.util import parse_url
 
 from lightnovel.wuxiaworld_com import WuxiaWorldComApi
@@ -11,21 +12,26 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.browser = prepare_browser(Har.WW_HJC_COVER_C1_2)
+        adapter = cls.browser.adapter
+        if isinstance(adapter, HarAdapter):
+            adapter.match_header_order = False
+            adapter.match_headers = False
+            adapter.match_data = False
+            adapter.delete_after_matching = False
 
     def test_conflation_chapter_1_2(self):
         api = WuxiaWorldComApi(self.browser)
-        novel = api.get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
+        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change'))
         novel.parse()
         chapter1 = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01'))
         chapter1.parse()
-        chapter1._book = novel.books[0]
-        chapter1.book.chapters.append(chapter1)
+        chapter1.index = 1
+
         chapter2 = api.get_chapter(
             parse_url('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02'))
         chapter2.parse()
-        chapter2._book = novel.books[0]
-        chapter2.book.chapters.append(chapter2)
+        chapter2.index = 2
 
         chapter1.clean_content()
         chapter2.clean_content()

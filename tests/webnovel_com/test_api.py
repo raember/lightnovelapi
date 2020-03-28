@@ -2,6 +2,8 @@ import logging
 import unittest
 from datetime import datetime
 
+from spoofbot.adapter import HarAdapter
+from spoofbot.util import TimelessRequestsCookieJar
 from urllib3.util import parse_url
 
 from tests.config import prepare_browser, Har
@@ -16,6 +18,13 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.browser = prepare_browser(Har.WM_SEARCH_RI_C1_5)
+        adapter = cls.browser.adapter
+        if isinstance(adapter, HarAdapter):
+            adapter.match_header_order = False
+            adapter.match_headers = False
+            adapter.match_data = False
+            adapter.delete_after_matching = False
+        cls.browser.cookies = TimelessRequestsCookieJar(datetime(2020, 1, 1))
         cls.browser.navigate('https://www.webnovel.com/')  # Get the csrf cookie
 
     def test_search_RI(self):
@@ -30,26 +39,26 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WebNovelComApi(self.browser)
-        novel = api.get_novel(parse_url('https://www.webnovel.com/book/8094127105005005'))
+        novel = api._get_novel(parse_url('https://www.webnovel.com/book/8094127105005005'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WebNovelComNovel))
         self.assertFalse(novel.success)
         novel.timestamp = datetime.fromtimestamp(1578354148.203)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertEqual(8094127105005005, novel.novel_id)
-        self.assertEqual('https://www.webnovel.com/book/8094127105005005', novel.alter_url().url)
-        self.assertEqual('https://www.webnovel.com', novel.alter_url('').url)
+        self.assertEqual('8094127105005005', novel.novel_id)
+        self.assertEqual('https://www.webnovel.com/book/8094127105005005', novel.url.url)
+        self.assertEqual('https://www.webnovel.com', novel.change_url(path=None).url)
         self.assertEqual('Renegade Immortal', novel.title)
         self.assertEqual('Er Gen', novel.author)
-        self.assertEqual('Rex', novel.translator)
-        self.assertEqual('© 2020 Webnovel', novel.rights)
+        self.assertListEqual(['Rex'], novel.translators)
+        self.assertEqual('© 2020 Webnovel', novel.copyright)
         self.assertEqual(datetime.fromtimestamp(0), novel.release_date)
-        self.assertEqual('/apiajax/chapter/GetContent'
+        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
                          '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347361830'
-                         '&_=1578354148203', novel.first_chapter.path)
+                         '&_=1578354148203', novel.generate_chapter_entries().__next__()[1].url.url)
         self.assertListEqual(['Cultivation', 'Weak to Strong'], novel.tags)
 
     def test_parsing_chapter(self):
@@ -71,11 +80,8 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347378214'
                          '&_=1578354148202', chapter.url.url)
-        self.assertEqual('https://www.webnovel.com', chapter.alter_url('').url)
+        self.assertEqual('https://www.webnovel.com', chapter.change_url(path=None, query=None).url)
         self.assertEqual('Immortals', chapter.title)
-        self.assertEqual('en', chapter.language)
-        self.assertEqual('Er Gen', chapter.author)
-        self.assertEqual('Rex', chapter.translator)
         self.assertEqual(21727507347378214, chapter.chapter_id)
         self.assertTrue(chapter.is_complete())
         self.assertFalse(chapter.is_vip)
@@ -83,12 +89,12 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
                          '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347361830'
-                         '&_=1578354148203', chapter.previous_chapter.url)
+                         '&_=1578354148203', chapter.previous_chapter.url.url)
         self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
                          '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347394598'
-                         '&_=1578354148203', chapter.next_chapter.url)
+                         '&_=1578354148203', chapter.next_chapter.url.url)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""The carriage quickly rolled along the road. Wang Lin’s body bounced with the uneven ground. In his arm was the package that contained all of his parents’ hope as he left the village he had lived in for 15 years.
@@ -140,6 +146,12 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.browser = prepare_browser(Har.WM_POTT_C92_95)
+        adapter = cls.browser.adapter
+        if isinstance(adapter, HarAdapter):
+            adapter.match_header_order = False
+            adapter.match_headers = False
+            adapter.match_data = False
+            adapter.delete_after_matching = False
         cls.browser.navigate('https://www.webnovel.com/')  # Get the csrf cookie
 
     def test_search_RI(self):
@@ -154,26 +166,26 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WebNovelComApi(self.browser)
-        novel = api.get_novel(parse_url('https://www.webnovel.com/book/7853880705001905'))
+        novel = api._get_novel(parse_url('https://www.webnovel.com/book/7853880705001905'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WebNovelComNovel))
         self.assertFalse(novel.success)
         novel.timestamp = datetime.fromtimestamp(1578419298.005)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
-        self.assertEqual(7853880705001905, novel.novel_id)
-        self.assertEqual('https://www.webnovel.com/book/7853880705001905', novel.alter_url().url)
-        self.assertEqual('https://www.webnovel.com', novel.alter_url('').url)
+        self.assertEqual('7853880705001905', novel.novel_id)
+        self.assertEqual('https://www.webnovel.com/book/7853880705001905', novel.url.url)
+        self.assertEqual('https://www.webnovel.com', novel.change_url(path=None).url)
         self.assertEqual('Pursuit of the Truth', novel.title)
         self.assertEqual('Er Gen', novel.author)
-        self.assertEqual('Mogumoguchan', novel.translator)
-        self.assertEqual('© 2020 Webnovel', novel.rights)
+        self.assertListEqual(['Mogumoguchan'], novel.translators)
+        self.assertEqual('© 2020 Webnovel', novel.copyright)
         self.assertEqual(datetime.fromtimestamp(0), novel.release_date)
-        self.assertEqual('/apiajax/chapter/GetContent'
+        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
                          '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
                          '&bookId=7853880705001905'
                          '&chapterId=21104441805559885'
-                         '&_=1578419298005', novel.first_chapter.path)
+                         '&_=1578419298005', novel.generate_chapter_entries().__next__()[1].url.url)
         self.assertListEqual(['Cultivation', 'Male Protagonist', 'Adventure', 'Weak to Strong',
                               'Unique Cultivation Technique', 'Multiple Realms', 'Hard-Working Protagonist',
                               'Legendary Artifacts', 'handsome male lead', 'Gods', 'Tribal Society',
@@ -200,11 +212,8 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
                          '&bookId=7853880705001905'
                          '&chapterId=21654434396301979'
                          '&_=1578419315007', chapter.url.url)
-        self.assertEqual('https://www.webnovel.com', chapter.alter_url('').url)
+        self.assertEqual('https://www.webnovel.com', chapter.change_url(path=None, query=None).url)
         self.assertEqual('The Fourth Arrow!', chapter.title)
-        self.assertEqual('en', chapter.language)
-        self.assertEqual('Er Gen', chapter.author)
-        self.assertEqual('Mogumoguchan', chapter.translator)
         self.assertEqual(21654434396301979, chapter.chapter_id)
         self.assertFalse(chapter.is_complete())
         self.assertTrue(chapter.is_vip)
@@ -212,12 +221,12 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
                          '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
                          '&bookId=7853880705001905'
                          '&chapterId=21654421779835543'
-                         '&_=1578419315007', chapter.previous_chapter.url)
+                         '&_=1578419315007', chapter.previous_chapter.url.url)
         self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
                          '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
                          '&bookId=7853880705001905'
                          '&chapterId=21654540428307122'
-                         '&_=1578419315007', chapter.next_chapter.url)
+                         '&_=1578419315007', chapter.next_chapter.url.url)
         self.maxDiff = None
         chapter.clean_content()
         self.assertEqual("""The terrifying image of the blood moon appeared in Su Ming's eyes. The moon looked enchanting, causing all of those who saw it to feel their hearts tremble. At that moment, Bi Tu, who was fighting against the elder in the sky, suddenly felt agitated for a reason that he could not understand. That agitation suddenly appeared, but it was not the first time it had occurred. He remembered distinctly that he had also felt this sort of agitation and restlessness several months ago.

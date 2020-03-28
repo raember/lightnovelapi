@@ -37,6 +37,5 @@ def prepare_browser(har_path: Tuple) -> Browser:
     har_adapter = HarAdapter(load_har(resolve_path(har_path)))
     har_adapter.strict_matching = False
     har_adapter.delete_after_match = False
-    browser.session.mount('https://', har_adapter)
-    browser.session.mount('http://', har_adapter)
+    browser.adapter = har_adapter
     return browser

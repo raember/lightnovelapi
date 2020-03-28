@@ -5,3 +5,8 @@ html5lib
 pillow
 spoofbot
 pbincli
+hurry.filesize
+brotli
+publicsuffix2
+hurry
+#cfscrape

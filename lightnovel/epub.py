@@ -172,11 +172,14 @@ class ContentFile(OpfFile):
         self.__get_metadata_tag('language', self.content.new_string(language))
 
     def __get_metadata_tag(self, key: str, default: PageElement = None, **kwargs) -> Tag:
+        tag = None
         try:
-            tag = self.metadata.find(f'dc\\:{key}')
+            tag = self.metadata.select_one(f'dc\\:{key}')
+        except AttributeError as ae:
+            # BeautifulSoup is bitching around
+            pass
         except Exception as e:
-            self.log.error(f"BeautifulSoup is bitching around ({e})")
-            tag = None
+            self.log.error(f"An error occurred: {e}")
         if tag is None:
             attrs = {'xmlns': "http://purl.org/dc/elements/1.1/"}
             attrs.update(kwargs)
@@ -235,7 +238,7 @@ class ContainerFile(XHtmlFile):
 
 class ChapterFile(XHtmlFile):
     def __init__(self, chapter: Chapter):
-        super(ChapterFile, self).__init__()
+        super().__init__()
         self.chapter = chapter
         book_n = chapter.book.number
         chapter_n = chapter.index
@@ -263,7 +266,7 @@ class ChapterFile(XHtmlFile):
 
 class BookFile(XHtmlFile):
     def __init__(self, book: Book):
-        super(BookFile, self).__init__()
+        super().__init__()
         self.book = book
         self.filepath = f"OEBPS/{book.index}_{slugify(book.title)}.{self.ext}"
         self.unique_id = f"book_{book.index}"

@@ -3,28 +3,29 @@ import re
 import unicodedata
 
 
-def slugify(value, allow_unicode=False, lowercase=True):
+def slugify(string: str, allow_unicode: bool = False) -> str:
     """
-    Convert to ASCII if 'allow_unicode' is False. Convert spaces to hyphens.
-    Remove characters that aren't alphanumerics, underscores, or hyphens.
-    Convert to lowercase. Also strip leading and trailing whitespace.
+    Slugify a given string.
+
+    :param string: The string to slugify.
+    :param allow_unicode: Whether to allow unicode characters or only ASCII characters.
+    :return: The slug.
     """
-    value = str(value)
+    string = str(string)
     if allow_unicode:
         # noinspection SpellCheckingInspection
-        value = unicodedata.normalize('NFKC', value)
+        string = unicodedata.normalize('NFKC', string)
     else:
         # noinspection SpellCheckingInspection
-        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub(r'[^\w\s-]', '', value).strip()
-    value = value.lower() if lowercase else value
-    return re.sub(r'[-\s]+', '-', value)
+        string = unicodedata.normalize('NFKD', string).encode('ascii', 'ignore').decode('ascii')
+    string = re.sub(r'[^\w\s-]', '', string).strip()
+    return re.sub(r'[-\s]+', '-', string)
 
 
 def sanitize_for_html(string: str) -> str:
     """
-    Prepares a string for usage in an html/xml environment.
-    Escapes strings for html.
+    Prepares a string for usage in an html/xml environment. Escapes strings for html.
+
     :param string: The string to sanitize.
     :return: The sanitized string.
     """
@@ -32,4 +33,10 @@ def sanitize_for_html(string: str) -> str:
 
 
 def unescape_string(string: str) -> str:
+    """
+    Unescapes a string
+
+    :param string: The string to unescape.
+    :return: The unescaped string.
+    """
     return string.encode('utf8').decode('unicode-escape').replace(r'\'', '')  # .replace(r"\'", "'").replace('\"', '"')
