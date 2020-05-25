@@ -141,8 +141,8 @@ class QidianUndergroundOrgNovelEntry(QidianUndergroundOrg, NovelEntry):
 
     def __str__(self):
         if self.complete:
-            return f"{self.title} (Complete)"
-        return self.title
+            return f"{super().__str__()} (Complete)"
+        return super().__str__()
 
 
 class QidianUndergroundOrgChapter(QidianUndergroundOrg, Chapter):
@@ -194,6 +194,7 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
             adapter = self.adapter
             if isinstance(adapter, FileCacheAdapter):
                 adapter.use_cache = True
+            self.log.info("Parsing main document now. This will take a while.")
             self._document = self._get_html_document(parse_url('https://toc.qidianunderground.org/'))
             if isinstance(adapter, FileCacheAdapter):
                 if not adapter.hit:

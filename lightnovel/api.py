@@ -659,13 +659,11 @@ class ChapterFetchStrategy:
 
 # noinspection DuplicatedCode
 class AllChapterFetchStrategy(ChapterFetchStrategy):
-
     def _should_download_chapter(self, chapter_entry: ChapterEntry) -> bool:
         return True
 
 
 class UpdatedChapterFetchStrategy(ChapterFetchStrategy):
-
     def _should_download_chapter(self, chapter_entry: ChapterEntry) -> bool:
         cached = self._chapter_already_downloaded(chapter_entry)
         if cached:

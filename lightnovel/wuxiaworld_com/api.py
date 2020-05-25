@@ -206,6 +206,7 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
         return tags
 
     def __extract_books(self, p15: Tag) -> List[WuxiaWorldComBook]:
+        already_processed_urls = []
         books = []
         book_index = 0
         for book_html in p15.select('div#accordion div.panel.panel-default'):
@@ -213,20 +214,22 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
             book = WuxiaWorldComBook(book_html.select_one('a.collapsed').text.strip())
             book.novel = self
             book.index = book_index
-            book._chapter_entries = self.__extract_chapters(book_html)
+            book._chapter_entries = self.__extract_chapters(book_html, already_processed_urls)
             self.log.debug(f"Book: {book}")
             books.append(book)
         return books
 
-    def __extract_chapters(self, book_html: Tag) -> List[WuxiaWorldComChapterEntry]:
+    def __extract_chapters(self, book_html: Tag, already_processed_urls: list) -> List[WuxiaWorldComChapterEntry]:
         chapters = []
         chapter_index = 0
         for chapter_html in book_html.select('div div li a'):
+            url = Url('https', host='www.wuxiaworld.com', path=chapter_html.get('href'))
+            if url in already_processed_urls:
+                self.log.debug(f"Found duplicate chapter url: {url}")
+                continue
+            already_processed_urls.append(url)
             chapter_index += 1
-            chapter = WuxiaWorldComChapterEntry(
-                Url('https', host='www.wuxiaworld.com', path=chapter_html.get('href')),
-                title=chapter_html.text.strip()
-            )
+            chapter = WuxiaWorldComChapterEntry(url, title=chapter_html.text.strip())
             chapter.index = chapter_index
             chapters.append(chapter)
         self.log.debug(f"Chapters found: {len(chapters)}")

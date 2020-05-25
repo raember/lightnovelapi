@@ -137,6 +137,10 @@ if __name__ == '__main__':
                         help='only check for updates chapters')
     parser.add_argument('--epub', dest='epub', action='store_true', default=False,
                         help='compile epub files from the books')
+    parser.add_argument('--wuxiaworld', dest='ww', action='store_true', default=False,
+                        help='Iterate through all hosted WuxiaWorld books')
+    parser.add_argument('--qidian-underground', dest='qu', action='store_true', default=False,
+                        help='Iterate through all hosted QidianUnderground books (takes webnovel into account)')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
                         help='be verbose')
     # noinspection SpellCheckingInspection
@@ -194,6 +198,25 @@ if __name__ == '__main__':
                     log.error(f"Error while reading input: {e}")
             urls.append(choice.url)
 
+    missed_novels = []
+
+    if args.ww:
+        for entry in ww_api.search(count=100):
+            urls.append(entry.url)
+
+    if args.qu:
+        for entry in qu_api.search():
+            matches = wn_api.search_for_specific_title(entry.title)
+            if len(matches) == 0:
+                log.error(f"Could not find any matching title on webnovel for {entry}.")
+                missed_novels.append(entry)
+            else:
+                first_match = matches[0]
+                if len(matches) > 1:
+                    log.info(f"Chose {first_match} out of: {', '.join(map(str, matches))}")
+                urls.append(first_match.url)
+        log.info(f"Found {len(urls)}/{len(urls) + len(missed_novels)} novels ({len(missed_novels)} missed)")
+
     if args.use_cached:
         if not isinstance(adapter, FileCacheAdapter):
             log.error("Cannot use cached urls without a cache.")
@@ -214,6 +237,7 @@ if __name__ == '__main__':
             novel = api.get_novel(url)
             if novel is None:
                 continue
+            log.info(f"Processing {novel}")
             fetching_strategy = api.fetch_updated if args.update else api.fetch_all
             gen = fetching_strategy.generate_chapters(novel)
 

@@ -456,6 +456,9 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
         }, data=encode_form_data(data))
         if isinstance(self.adapter, FileCacheAdapter):
             self.adapter.use_cache = True
+        if len(response.text) == 0:
+            self.log.error("Api did not return anything")
+            return []
         data = response.json()
         if data['msg'] != 'Success':
             self.log.error(f"Api returned error {data['code']}: {data['msg']}")
@@ -484,6 +487,8 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
                 continue
             searched_lengths.append(len(keyword))
             matches = self._search_using_keyword(keyword, title)
+            if len(matches) == 0:
+                continue
             self._session.request_timeout = old_delay
             return matches
         self.log.error(f"Could not find any novel matching '{title}'.")

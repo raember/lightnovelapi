@@ -174,7 +174,7 @@ class DeleteChapters(Pipeline):
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         for book, chapter in gen:
             self.delete_chapter(chapter)
-            self.log.debug(f"Deleted chapter {chapter}")
+            self.log.debug(f"Deleted chapter {chapter} from memory")
             yield book, chapter
 
     # noinspection PyUnusedLocal
@@ -267,7 +267,7 @@ class StatisticsMaker(Pipeline):
                 self._overall.started = stats.started
             if self._overall.ended < stats.ended:
                 self._overall.ended = stats.ended
-        self.log.info("Overall:")
+        self.log.info(f"Overall ({len(self._novels)}):")
         rest, seconds = divmod(self._overall.duration.total_seconds(), 60)
         rest, minutes = divmod(rest, 60)
         _, hours = divmod(rest, 60)
