@@ -43,7 +43,7 @@ class WebNovelComChapterEntry(WebNovelCom, ChapterEntry):
         assert chapter_id.isdigit()
         self._chapter_id = chapter_id
         self._timestamp = timestamp
-        self._url = parse_url(f"https://www.webnovel.com/apiajax/chapter/GetContent?"
+        self._url = parse_url(f"https://www.webnovel.com/go/pcm/chapter/GetContent?"
                               f"_csrfToken={csrf_token}&"
                               f"bookId={book_id}&"
                               f"chapterId={chapter_id}&"
@@ -71,7 +71,7 @@ class WebNovelComChapterEntry(WebNovelCom, ChapterEntry):
 
     @property
     def spoof_url(self) -> Url:
-        return parse_url(f"https://www.webnovel.com/apiajax/chapter/{self._book_id}/{self._chapter_id}")
+        return parse_url(f"https://www.webnovel.com/go/pcm/chapter/{self._book_id}/{self._chapter_id}")
 
     @property
     def mime_type(self) -> str:
@@ -138,7 +138,7 @@ class WebNovelComNovel(WebNovelCom, Novel):
         g_data = self._document.select_one('body.footer_auto > script')
         if not isinstance(g_data, Tag):
             raise Exception("Unexpected type of tag selection")
-        match = re.search(r"g_data\.book = (?P<json>{.*\});$", g_data.text, re.MULTILINE)
+        match = re.search(r"g_data\.book= (?P<json>{.*})$", g_data.text, re.MULTILINE)
         if not match:
             raise Exception("Failed to match for json data")
         json_str = match.group('json')
@@ -161,7 +161,14 @@ class WebNovelComNovel(WebNovelCom, Novel):
             )
             adapter.backup_and_miss_next_request = True
         # noinspection SpellCheckingInspection
-        chapter_list_url = Url('https', host='www.webnovel.com', path='/apiajax/chapter/GetChapterList')
+        chapter_list_url = Url(
+            'https', host='www.webnovel.com', path='/apiajax/chapter/GetChapterList',
+            query=dict_to_query({
+                '_csrfToken': self._session.cookies.get('_csrfToken'),
+                'bookId': self._novel_id,
+                '_': int(datetime.now().timestamp())
+            })
+        )
         response = self._session.get(chapter_list_url.url, params={
             '_csrfToken': self._session.cookies.get('_csrfToken'),
             'bookId': self._novel_id,
@@ -336,7 +343,8 @@ class WebNovelComFetchStrategy(ChapterFetchStrategy, ABC):
                 self._acquire_qidian_underground_api()
                 if qu_novel is None:
                     try:
-                        qu_novel = self._qidian_underground_api.get_novel(novel.title)
+                        qu_novel_entry = self._qidian_underground_api.search(novel.title)[0]
+                        qu_novel = self._qidian_underground_api.get_novel(qu_novel_entry)
                     except LookupError:
                         self.log.error("Could not find novel on Qidian Underground.")
                         return
