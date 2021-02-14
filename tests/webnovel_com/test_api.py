@@ -145,7 +145,7 @@ Wang Lin stared at the scene before him, full of excitement. Suddenly, he notice
 class WuxiaWorldComApiPOTTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.browser = prepare_browser(Har.WM_POTT_C92_95)
+        cls.browser = prepare_browser(Har.WM_POTT_C40_41)
         adapter = cls.browser.adapter
         if isinstance(adapter, HarAdapter):
             adapter.match_header_order = False
@@ -154,7 +154,7 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
             adapter.delete_after_matching = False
         cls.browser.navigate('https://www.webnovel.com/')  # Get the csrf cookie
 
-    def test_search_RI(self):
+    def test_search_POTT(self):
         api = WebNovelComApi(self.browser)
         results = api.search('Pursuit of the Truth')
         self.assertIsNotNone(results)
