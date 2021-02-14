@@ -174,7 +174,7 @@ if __name__ == '__main__':
         if args.search == '?':
             args.search = input("Please enter a title to search for: ")
         search_results: List[NovelEntry] = []
-        for api in [ww_api, qu_api, wn_api]:
+        for api in [ww_api, wn_api]:
             if isinstance(api, WebNovelComApi):
                 matches = api.search_for_specific_title(args.search)
             else:
