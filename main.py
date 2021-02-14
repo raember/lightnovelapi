@@ -93,7 +93,7 @@ def get_os(arg: str) -> OS:
 
 def get_browser(arg: str, **kwargs) -> Browser:
     if arg == 'ff':
-        return Firefox(**kwargs)
+        return Firefox(**kwargs, ff_version=(85, 0))
     else:
         return Chrome(**kwargs)
 
