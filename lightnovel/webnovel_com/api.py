@@ -43,7 +43,7 @@ class WebNovelComChapterEntry(WebNovelCom, ChapterEntry):
         assert chapter_id.isdigit()
         self._chapter_id = chapter_id
         self._timestamp = timestamp
-        self._url = parse_url(f"https://www.webnovel.com/go/pcm/chapter/GetContent?"
+        self._url = parse_url(f"https://www.webnovel.com/go/pcm/chapter/getContent?"
                               f"_csrfToken={csrf_token}&"
                               f"bookId={book_id}&"
                               f"chapterId={chapter_id}&"
@@ -258,7 +258,7 @@ class WebNovelComChapter(WebNovelCom, Chapter):
         chapter_info = data['chapterInfo']
         self._chapter_id = int(chapter_info['chapterId'])
         self._title = chapter_info['chapterName']
-        self._is_vip = int(chapter_info['isVip'])
+        self._is_vip = int(chapter_info['vipStatus'])
         self._previous_chapter = self.build_url(
             self._csrf_token,
             int(book_info['bookId']),
@@ -295,7 +295,7 @@ class WebNovelComChapter(WebNovelCom, Chapter):
         if chapter_id == -1:
             return None
         # noinspection SpellCheckingInspection
-        return Url('https', host='www.webnovel.com', path='/apiajax/chapter/GetContent',
+        return Url('https', host='www.webnovel.com', path='/go/pcm/chapter/getContent',
                    query=dict_to_query({
                        '_csrfToken': csrf_token,
                        'bookId': book_id,
