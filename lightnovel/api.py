@@ -755,6 +755,8 @@ class LightNovelApi(Hosted, ABC):
         if len(json_kwargs) > 0:
             self.log.warning("Unnecessary json kwargs passed. Ignoring.")
         if isinstance(self._session, Browser):
+            if isinstance(self._session.adapter, FileCacheAdapter):
+                self._session.adapter.backup_and_miss_next_request = False
             response = self._session.navigate(url.url, **requests_kwargs)
         else:
             response = self._session.get(url.url, **requests_kwargs)
