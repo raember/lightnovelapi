@@ -4,7 +4,7 @@ from urllib3.util import Url
 
 def decrypt(url: Url, json_data: dict) -> str:
     p = Paste()
-    p.setVersion(1)
+    p.setVersion(json_data.get('v', 1))
     p.setHash(url.fragment)
     p.loadJSON(json_data)
     p.decrypt()
