@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import List, Dict, Generator, Tuple
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from requests import HTTPError
 from requests.cookies import create_cookie
 from spoofbot.adapter import FileCacheAdapter
 from urllib3.util.url import parse_url, Url
@@ -9,6 +11,7 @@ from urllib3.util.url import parse_url, Url
 from api import UNKNOWN
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, NovelEntry
 from util.privatebin import decrypt
+from util.text import unescape_string
 
 
 class QidianUndergroundOrg:
@@ -42,12 +45,14 @@ class QidianUndergroundOrgChapterEntry(QidianUndergroundOrg, ChapterEntry):
 class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
     _index_to_chapter_entry: Dict[int, QidianUndergroundOrgChapterEntry]
     _link_to_document: Dict[Url, BeautifulSoup]
+    _chapters: List[dict]
 
-    def __init__(self, title: str, document: BeautifulSoup):
-        super().__init__(Url(self._hoster_homepage.scheme, host=self._hoster_homepage.hostname), document)
+    def __init__(self, title: str, chapters: list):
+        super().__init__(Url(self._hoster_homepage.scheme, host=self._hoster_homepage.hostname), None)
         self._title = title
         self._index_to_chapter_entry = {}
         self._link_to_document = {}
+        self._chapters = chapters
 
     @property
     def index_to_chapter_entry(self) -> Dict[int, QidianUndergroundOrgChapterEntry]:
@@ -64,7 +69,7 @@ class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
         """
         self._success = self._parse()
         self._ensure_vars_changed({
-            '_document': None,
+            # '_document': None,
             '_title': UNKNOWN,
             '_author': UNKNOWN,
             '_language': UNKNOWN,
@@ -83,14 +88,14 @@ class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
         self._author = ''
         self._translator = ''
         book = QidianUndergroundOrgBook(self._title)
-        for anchor in self._get_chapter_links():
-            indices = anchor.next.string
+        for segment in self._chapters:
+            indices = segment['Text']
             if ' - ' in indices:
                 from_idx, to_idx = tuple(map(int, indices.split(' - ')))
             else:
                 from_idx = int(indices)
                 to_idx = from_idx
-            entry = QidianUndergroundOrgChapterEntry(parse_url(anchor.get('href')), from_idx, to_idx)
+            entry = QidianUndergroundOrgChapterEntry(parse_url(segment['Href']), from_idx, to_idx)
             for idx in range(from_idx, to_idx + 1):
                 self._index_to_chapter_entry[idx] = entry
             book.chapter_entries.append(entry)
@@ -98,18 +103,6 @@ class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
         url = book.chapter_entries[0].url
         self._first_chapter_path = f"{url.path}?{url.query}"
         return True
-
-    def _get_chapter_links(self) -> List[Tag]:
-        tag: Tag
-        next_is_chapter_list = False
-        content_div = self._document.select_one('div.content')
-        if not isinstance(content_div, Tag):
-            raise Exception("Unexpected type of tag selection")
-        for tag in content_div.contents:
-            if next_is_chapter_list and isinstance(tag, Tag) and tag.name == 'ul':
-                return tag.select('a')
-            next_is_chapter_list |= (tag.name == 'p' and tag.next.strip() == self._title)
-        raise LookupError(f"{self.quoted_title} not found in HTML content")
 
     def generate_chapter_entries(self) -> Generator[Tuple['Book', 'ChapterEntry'], None, None]:
         book_n = 0
@@ -134,9 +127,13 @@ class QidianUndergroundOrgBook(QidianUndergroundOrg, Book):
 
 class QidianUndergroundOrgNovelEntry(QidianUndergroundOrg, NovelEntry):
     complete: bool
+    novel_id: str
+    last_update: datetime
 
-    def __init__(self, title: str, complete: bool):
+    def __init__(self, title: str, novel_id: str, last_update: datetime, complete: bool):
         super().__init__(Url(self._hoster_homepage.scheme, host=self._hoster_homepage.hostname, path='/'), title)
+        self.novel_id = novel_id
+        self.last_update = last_update
         self.complete = complete
 
     def __str__(self):
@@ -172,8 +169,12 @@ class QidianUndergroundOrgChapter(QidianUndergroundOrg, Chapter):
 
 
 class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
-    _document: BeautifulSoup = None
+    _novels: List[QidianUndergroundOrgNovelEntry] = []
     _novel: QidianUndergroundOrgNovel = None
+
+    @property
+    def novel_url(self) -> str:
+        return self._novel.url if self._novel is not None else ''
 
     @property
     def active_novel(self) -> QidianUndergroundOrgNovel:
@@ -183,45 +184,31 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
     def active_novel(self, value: QidianUndergroundOrgNovel):
         self._novel = value
 
-    def get_novel(self, title: str, **kwargs) -> QidianUndergroundOrgNovel:
-        self._populate_main_document()
-        self._novel = QidianUndergroundOrgNovel(title, self._document)
+    def get_novel(self, novel_entry: QidianUndergroundOrgNovelEntry, **kwargs) -> QidianUndergroundOrgNovel:
+        # https://toc.qidianunderground.org/api/v1/pages/public -> title to Id
+        # https://toc.qidianunderground.org/api/v1/pages/public/chapters   ???
+        # https://toc.qidianunderground.org/api/v1/pages/public/b984e3b6625ce22f/chapters -> chapters of title
+        self._populate_novel_list()
+        chapters = list(self._get_json_document(
+            parse_url(f"https://toc.qidianunderground.org/api/v1/pages/public/{novel_entry.novel_id}/chapters")
+        ))
+        self._novel = QidianUndergroundOrgNovel(novel_entry.title, chapters)
         self._novel.parse()
         return self._novel
 
-    def _populate_main_document(self):
-        if not self._document:
+    def _populate_novel_list(self):
+        if not self._novels:
             adapter = self.adapter
             if isinstance(adapter, FileCacheAdapter):
                 adapter.use_cache = True
-            self.log.info("Parsing main document now. This will take a while.")
-            self._document = self._get_html_document(parse_url('https://toc.qidianunderground.org/'))
-            if isinstance(adapter, FileCacheAdapter):
-                if not adapter.hit:
-                    raise Exception("Cannot get data from raw website. "
-                                    "Please copy to cache by hand and name it '.html'")
-            # qu_toc_url = parse_url('https://toc.qidianunderground.org/')
-            # adapter = self.adapter
-            # if isinstance(adapter, FileCacheAdapter):
-            #     adapter.use_cache = False
-            #
-            # # Use cfscrape to climb the cloudflare wall
-            # old_session = self._session
-            # cfs = cfscrape.create_scraper(old_session)
-            # cfs.adapters = old_session.adapters
-            # if isinstance(old_session, Browser):
-            #     # noinspection PyProtectedMember
-            #     cfs.headers = old_session._get_default_headers('GET', qu_toc_url, True)
-            # self._session = cfs
-            # self._document = self._get_html_document(qu_toc_url)
-            #
-            # # Restore old session
-            # self._session = old_session
-            # if isinstance(adapter, FileCacheAdapter):
-            #     adapter.use_cache = True
-            #     # if not adapter.hit:
-            #     #     raise Exception("Cannot get data from raw website. "
-            #     #                     "Please copy to cache by hand and name it '.html'")
+            novels = self._get_json_document(parse_url('https://toc.qidianunderground.org/api/v1/pages/public'))
+            for novel in novels:
+                self._novels.append(QidianUndergroundOrgNovelEntry(
+                    title=unescape_string(novel['Name']),
+                    novel_id=novel['ID'],
+                    last_update=datetime.utcfromtimestamp(int(novel['LastUpdated'])),
+                    complete=(novel.get('Status', '(Airing)') == '(Completed)')  # (Completed), (Trial) or non existent
+                ))
 
     def get_chapter(self, index: int, **kwargs) -> QidianUndergroundOrgChapter:
         if not self._novel:
@@ -240,6 +227,12 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
                     'Accept': 'application/json, text/javascript, */*; q=0.01',
                     'X-Requested-With': 'JSONHttpRequest'
                 })
+            elif entry.url.hostname == 'vim.cx':
+                url = Url('https', host=entry.url.hostname, path=entry.url.path, query=f"pasteid={paste_id}")
+                response = self._session.get(url.url, headers={
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'JSONHttpRequest'
+                })
             elif entry.url.hostname == 'paste.tech-port.de':
                 # noinspection SpellCheckingInspection
                 url = Url('https', host=entry.url.hostname, path=entry.url.path, query=f"pasteid={paste_id}")
@@ -251,9 +244,11 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
                 })
             else:
                 raise Exception(f"Unknown privatebin hoster {entry.url.url}")
-            if not response.text.startswith('{'):
+            try:
+                response.raise_for_status()
+            except HTTPError as ex:
                 adapter.delete_last()
-                raise Exception(f"Private bin seems to be down: {entry.url.url}")
+                raise Exception(f"Failed to fetch privatebin paste: {ex}")
             json_data = response.json()
             assert json_data['id'] == paste_id
             self.log.info("Decrypting privatebin paste.")
@@ -262,21 +257,10 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
         return QidianUndergroundOrgChapter(entry.url, self._novel.link_to_document[entry.url], index)
 
     def search(self, title: str = '', complete: bool = None) -> List[QidianUndergroundOrgNovelEntry]:
-        self._populate_main_document()
+        self._populate_novel_list()
         entries = []
-        tag: Tag
-        for tag in self._document.select('div.content p'):
-            novel_title: str = tag.next.strip()
-            next_content = tag.contents[1]
-            novel_complete = (
-                    isinstance(next_content, Tag) and
-                    next_content.name == 'strong' and
-                    next_content.next == '(Completed)'
-            )
-            if title.lower() in novel_title.lower():
-                if not complete or complete and complete == novel_complete:
-                    entries.append(QidianUndergroundOrgNovelEntry(
-                        novel_title,
-                        novel_complete
-                    ))
+        for novel in self._novels:
+            if title.lower() in novel.title.lower():
+                if not complete or complete and complete == novel.complete:
+                    entries.append(novel)
         return entries

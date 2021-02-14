@@ -29,7 +29,7 @@ class Har:
     WW_SEARCH_MODERN = (*data_folder, 'WW_Search_modern.har')
     WM_SEARCH_RI_C1_5 = (*data_folder, 'webnovel_Search_RI_C1-5.har')
     WM_POTT_C92_95 = (*data_folder, 'webnovel_POTT_C92-95.har')
-    QU_POT_C94_108 = (*data_folder, 'qidianunderground_POT_C94-108.har')
+    QU_POT_C89_103 = (*data_folder, 'qidianunderground_POT_C89-103.har')
 
 
 def prepare_browser(har_path: Tuple) -> Browser:
