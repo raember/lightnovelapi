@@ -202,7 +202,10 @@ if __name__ == '__main__':
 
     if args.ww:
         for entry in ww_api.search(count=100):
-            urls.append(entry.url)
+            if entry.url.path.startswith('/novel'):
+                urls.append(entry.url)
+            else:
+                log.debug(f"Discarding {entry}, because it's a preview novel.")
 
     if args.qu:
         for entry in qu_api.search():
