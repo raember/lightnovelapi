@@ -8,10 +8,10 @@ from urllib3.util import parse_url, Url
 
 import lightnovel
 from lightnovel import LightNovelApi, NovelEntry
-from pipeline import EpubMaker, Parser, DeleteChapters, StatisticsMaker
-from qidianunderground_org import QidianUndergroundOrgApi
-from webnovel_com import WebNovelComApi
-from wuxiaworld_com import WuxiaWorldComApi
+from lightnovel.pipeline import EpubMaker, Parser, DeleteChapters, StatisticsMaker
+from lightnovel.qidianunderground_org import QidianUndergroundOrgApi
+from lightnovel.webnovel_com import WebNovelComApi
+from lightnovel.wuxiaworld_com import WuxiaWorldComApi
 
 
 # from settings import EMAIL, PASSWORD
