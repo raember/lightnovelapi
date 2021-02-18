@@ -22,7 +22,7 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
         if isinstance(adapter, HarAdapter):
             adapter.match_header_order = False
             adapter.match_headers = False
-            adapter.match_data = False
+            adapter.match_data = True
             adapter.delete_after_matching = False
         cls.browser.cookies = TimelessRequestsCookieJar(datetime(2020, 1, 1))
         cls.browser.navigate('https://www.webnovel.com/')  # Get the csrf cookie
@@ -31,67 +31,67 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
         api = WebNovelComApi(self.browser)
         results = api.search('Renegade Immortal')
         self.assertIsNotNone(results)
-        self.assertEqual(1, len(results))
-        result = results[0]
+        self.assertEqual(3, len(results))
+        result = results[1]
         self.assertEqual('Renegade Immortal', result.title)
         self.assertEqual(8094127105005005, result.id)
         self.assertEqual('https://www.webnovel.com/book/8094127105005005', result.url.url)
 
     def test_parsing_novel(self):
         api = WebNovelComApi(self.browser)
-        novel = api._get_novel(parse_url('https://www.webnovel.com/book/8094127105005005'))
+        novel = api._get_novel(parse_url('https://www.webnovel.com/book/renegade-immortal_8094127105005005'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WebNovelComNovel))
         self.assertFalse(novel.success)
-        novel.timestamp = datetime.fromtimestamp(1578354148.203)
+        novel.timestamp = datetime.fromtimestamp(1613587005.303)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
         self.assertEqual('8094127105005005', novel.novel_id)
-        self.assertEqual('https://www.webnovel.com/book/8094127105005005', novel.url.url)
+        self.assertEqual('https://www.webnovel.com/book/renegade-immortal_8094127105005005', novel.url.url)
         self.assertEqual('https://www.webnovel.com', novel.change_url(path=None).url)
         self.assertEqual('Renegade Immortal', novel.title)
         self.assertEqual('Er Gen', novel.author)
         self.assertListEqual(['Rex'], novel.translators)
-        self.assertEqual('© 2020 Webnovel', novel.copyright)
+        self.assertEqual('© 2021 Webnovel', novel.copyright)
         self.assertEqual(datetime.fromtimestamp(0), novel.release_date)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=f4731e60-2913-416d-848f-6612e41767ea'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347361830'
-                         '&_=1578354148203', novel.generate_chapter_entries().__next__()[1].url.url)
-        self.assertListEqual(['Cultivation', 'Weak to Strong'], novel.tags)
+                         '&_=1613587005303', novel.generate_chapter_entries().__next__()[1].url.url)
+        self.assertListEqual(['Weak to Strong', 'Cultivation'], novel.tags)
 
     def test_parsing_chapter(self):
         api = WebNovelComApi(self.browser)
         chapter = api.get_chapter(parse_url('https://www.webnovel.com'
-                                            '/apiajax/chapter/GetContent'
-                                            '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
+                                            '/go/pcm/chapter/getContent'
+                                            '?_csrfToken=f4731e60-2913-416d-848f-6612e41767ea'
                                             '&bookId=8094127105005005'
                                             '&chapterId=21727507347378214'
-                                            '&_=1578354148202'))
+                                            '&_=1613587011601'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WebNovelComChapter))
         self.assertFalse(chapter.success)
         chapter.timestamp = datetime.fromtimestamp(1578354148.203)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=f4731e60-2913-416d-848f-6612e41767ea'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347378214'
-                         '&_=1578354148202', chapter.url.url)
+                         '&_=1613587011601', chapter.url.url)
         self.assertEqual('https://www.webnovel.com', chapter.change_url(path=None, query=None).url)
         self.assertEqual('Immortals', chapter.title)
         self.assertEqual(21727507347378214, chapter.chapter_id)
         self.assertTrue(chapter.is_complete())
         self.assertFalse(chapter.is_vip)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=f4731e60-2913-416d-848f-6612e41767ea'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347361830'
                          '&_=1578354148203', chapter.previous_chapter.url.url)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=64nio7VwoiRDMT9sSOyrQFIQ9gWb1fQZxbIdqIpJ'
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=f4731e60-2913-416d-848f-6612e41767ea'
                          '&bookId=8094127105005005'
                          '&chapterId=21727507347394598'
                          '&_=1578354148203', chapter.next_chapter.url.url)
@@ -137,7 +137,7 @@ The youth showed a face full of respect and said, “Third brother, these are th
 The middle aged man’s gaze swept across them. He focused on Wang Zhuo a few times. Smiling, he said, “I know you are about to have a breakthrough. I’ll handle the test, you go cultivate.”
 The youth agreed. His body moved toward the mountain, and in the blink of an eye, disappeared without a trace.
 Wang Lin stared at the scene before him, full of excitement. Suddenly, he noticed someone tugging his clothes and turned around. It was Wang Hao. His eyes were filled with excitement. He said, “This is where the immortals live! F*ck my grandmother! No matter what, I, Wang Hao, must be selected.” Saying so, he touched the bulging object concealed in his shirt.
-""".replace('\n', '\r\n'),
+""",
                          chapter.content.text)
 
 
@@ -153,6 +153,8 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
             adapter.match_data = False
             adapter.delete_after_matching = False
         cls.browser.navigate('https://www.webnovel.com/')  # Get the csrf cookie
+        # In case the CSRF token does not get assigned via cookies, it has expired already!
+        # Change the expiration date to the heat death of the universe!
 
     def test_search_POTT(self):
         api = WebNovelComApi(self.browser)
@@ -166,74 +168,158 @@ class WuxiaWorldComApiPOTTest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WebNovelComApi(self.browser)
-        novel = api._get_novel(parse_url('https://www.webnovel.com/book/7853880705001905'))
+        novel = api._get_novel(parse_url('https://www.webnovel.com/book/pursuit-of-the-truth_7853880705001905'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WebNovelComNovel))
         self.assertFalse(novel.success)
-        novel.timestamp = datetime.fromtimestamp(1578419298.005)
+        novel.timestamp = datetime.fromtimestamp(1613685056.304)
         self.assertTrue(novel.parse())
         self.assertTrue(novel.success)
         self.assertEqual('7853880705001905', novel.novel_id)
-        self.assertEqual('https://www.webnovel.com/book/7853880705001905', novel.url.url)
+        self.assertEqual('https://www.webnovel.com/book/pursuit-of-the-truth_7853880705001905', novel.url.url)
         self.assertEqual('https://www.webnovel.com', novel.change_url(path=None).url)
         self.assertEqual('Pursuit of the Truth', novel.title)
         self.assertEqual('Er Gen', novel.author)
         self.assertListEqual(['Mogumoguchan'], novel.translators)
-        self.assertEqual('© 2020 Webnovel', novel.copyright)
+        self.assertEqual('© 2021 Webnovel', novel.copyright)
         self.assertEqual(datetime.fromtimestamp(0), novel.release_date)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
                          '&bookId=7853880705001905'
                          '&chapterId=21104441805559885'
-                         '&_=1578419298005', novel.generate_chapter_entries().__next__()[1].url.url)
-        self.assertListEqual(['Cultivation', 'Male Protagonist', 'Adventure', 'Weak to Strong',
-                              'Unique Cultivation Technique', 'Multiple Realms', 'Hard-Working Protagonist',
-                              'Legendary Artifacts', 'handsome male lead', 'Gods', 'Tribal Society',
-                              'Death Of Loved Ones', 'Transplanted Memories', 'Revenge', 'Alchemy', 'Betrayal',
-                              'Demons', 'Underestimated Protagonist', 'Romantic Subplot', 'Secret Identity',
-                              'Hiding True Abilities', 'Pill Concocting', 'Blood Manipulation'], novel.tags)
+                         '&_=1613685056304', novel.generate_chapter_entries().__next__()[1].url.url)
+        self.assertListEqual(sorted(['Cultivation', 'Male Protagonist', 'Adventure', 'Weak to Strong',
+                                     'Unique Cultivation Technique', 'Multiple Realms', 'Hard-Working Protagonist',
+                                     'Legendary Artifacts', 'handsome male lead', 'Gods', 'Tribal Society',
+                                     'Death Of Loved Ones', 'Transplanted Memories', 'Revenge', 'Alchemy', 'Betrayal',
+                                     'Demons', 'Underestimated Protagonist', 'Romantic Subplot', 'Secret Identity',
+                                     'Hiding True Abilities', 'Pill Concocting', 'Blood Manipulation']),
+                             sorted(novel.tags))
 
-    def test_parsing_chapter(self):
+    def test_parsing_chapter_40(self):
         api = WebNovelComApi(self.browser)
         chapter = api.get_chapter(parse_url('https://www.webnovel.com'
-                                            '/apiajax/chapter/GetContent'
-                                            '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
+                                            '/go/pcm/chapter/getContent'
+                                            '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
                                             '&bookId=7853880705001905'
-                                            '&chapterId=21654434396301979'
-                                            '&_=1578419315007'))
+                                            '&chapterId=21186817416027363'
+                                            '&_=1613685072802'))
         self.assertIsNotNone(chapter)
         self.assertTrue(isinstance(chapter, WebNovelComChapter))
         self.assertFalse(chapter.success)
-        chapter.timestamp = datetime.fromtimestamp(1578419315.007)
+        chapter.timestamp = datetime.fromtimestamp(1613677829.700)
         self.assertTrue(chapter.parse())
         self.assertTrue(chapter.success)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
                          '&bookId=7853880705001905'
-                         '&chapterId=21654434396301979'
-                         '&_=1578419315007', chapter.url.url)
+                         '&chapterId=21186817416027363'
+                         '&_=1613685072802', chapter.url.url)
         self.assertEqual('https://www.webnovel.com', chapter.change_url(path=None, query=None).url)
-        self.assertEqual('The Fourth Arrow!', chapter.title)
-        self.assertEqual(21654434396301979, chapter.chapter_id)
-        self.assertFalse(chapter.is_complete())
-        self.assertTrue(chapter.is_vip)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
+        self.assertEqual('Feeling of Animosity!', chapter.title)
+        self.assertEqual(21186817416027363, chapter.chapter_id)
+        self.assertTrue(chapter.is_complete())
+        self.assertFalse(chapter.is_vip)
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
                          '&bookId=7853880705001905'
-                         '&chapterId=21654421779835543'
-                         '&_=1578419315007', chapter.previous_chapter.url.url)
-        self.assertEqual('https://www.webnovel.com/apiajax/chapter/GetContent'
-                         '?_csrfToken=7KRqdh9Hl2OF1xajN4rA94KXpJ9cCRYPwAGrsUiK'
+                         '&chapterId=21186809094528226'
+                         '&_=1613677829700', chapter.previous_chapter.url.url)
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
                          '&bookId=7853880705001905'
-                         '&chapterId=21654540428307122'
-                         '&_=1578419315007', chapter.next_chapter.url.url)
+                         '&chapterId=21186868150328548'
+                         '&_=1613677829700', chapter.next_chapter.url.url)
         self.maxDiff = None
         chapter.clean_content()
-        self.assertEqual("""The terrifying image of the blood moon appeared in Su Ming's eyes. The moon looked enchanting, causing all of those who saw it to feel their hearts tremble. At that moment, Bi Tu, who was fighting against the elder in the sky, suddenly felt agitated for a reason that he could not understand. That agitation suddenly appeared, but it was not the first time it had occurred. He remembered distinctly that he had also felt this sort of agitation and restlessness several months ago.
-It was as if he could no longer control his Qi, and it wanted to leave his body so as to worship something.
-Mo Sang, who was fighting against Bi Tu, was originally exhausted, but a glint suddenly appeared in his eyes. He noticed the change in Bi Tu's Qi and quickly took a step forward. The dark python by his side roared, using the chance to show off the might of its Berserker Art.
-The huge wave of blood fog tumbled violently in the sky, imitating the motion of Bi Tu moving backwards.
-That scene made all the pe""".replace('\n', '\r\n'),
+        self.assertEqual("""Time passed by as Su Ming immersed himself in the process of quenching herbs and his training. Xiao Hong returned to the cave exhausted after a few days as Su Ming was meditating. Its red fur had darkened several shades as well, illustrating just how tired it was. 
+However, tired as it may be, there were expressions of longing and pride on its face. It kept sniffing its right paw and grinned as if it was giggling foolishly.  
+When Xiao Hong came back, Su Ming opened his eyes slightly. When he saw Xiao Hong, he remembered what he witnessed the day he followed Xiao Hong into the forest. An awkward expression settled on his face.
+Xiao Hong noticed Su Ming’s gaze and turned around to look at him. It immediately ran towards him and raised its right paw proudly. It extended its right paw to Su Ming, urging Su Ming to sniff it again. It felt that it had to share everything that was good with everyone.
+Su Ming did not know whether to laugh or cry. He no longer paid any attention to Xiao Hong and once again immersed himself in his training.
+The month soon passed by. The date Su Ming was to go with the elder to Wind Stream Tribe loomed near.
+During this period of time, Su Ming used up all of the Cloud Gauze Grass in his possession but only managed to create one Mountain Spirit. The high failure rate made Su Ming’s spirits incredibly low.
+At the very least, his training had been pretty successful. He had completely settled into the fourth level of the Blood Solidification Realm and managed to manifest two more blood veins, bringing the total blood veins he manifested up to 49 blood veins. He had also gradually adapted to the strangeness of the Fire Berserker Art. 
+However, the further down the path of the Blood Solidification Realm, the harder it was to solidify more blood veins. Lately, no matter how hard Su Ming trained, he could no longer solidify any more of his blood. He understood that this was related to the incompletion of the third burning of his blood.
+Moreover when the moon was out at night, Su Ming acted according to his senses and tried to control the moonlight multiple times. However, the results were not obvious. It seemed like he could only control no more than a small ray of moonlight.
+Even though it was only a small ray of moonlight, in Su Ming’s hands, it was incredibly sharp, even more so than his horn. Most importantly, Xiao Hong could not see the ray of moonlight. From that observation alone, Su Ming believed that he was the only one who could see the moonlight, no one else.
+It was daylight. Su Ming stood up and looked around the fire cave. After a moment of silence he pushed his Barren Cauldron aside. He did not know how long he would stay at Wind Stream Tribe. He needed to make preparations.
+On the walls of the fire cave were numerous fine ravines decorating the walls densely. Those ravines were created during the days Su Ming learned how to control the moonlight.
+Once he packed up, Su Ming left the cave. Xiao Hong had already woken up. When it saw that Su Ming was about to leave, it followed him quickly. When they arrived outside the cave, it climbed onto Su Ming’s shoulders, too lazy to descend the mountain on its own.
+‘It’s a pity Mountain Spirit is too hard to make… There were eight holes underneath the picture of Mountain Spirit on the second door so it’s obvious I have to offer eight of them… I wonder how long it’ll take for me to offer up 8 Mountain Spirits without forsaking my own training…
+‘Besides, I also need to offer the pills called Fire of the South for the second door to open… But I’ve never seen the herbs required for the pills before. Thank the heavens for the bamboo slip the elder gave me. At least there are some descriptions of herbs there.’ 
+Su Ming stood outside the cave and looked at the sun rising from the horizon He breathed in the refreshing cold air around him.
+‘I can only open the second door after I have gathered enough Mountain Spirit and Fire of the South… At the very least there is no need for me to create The Welcoming of Deities. Still, it just shows how rare The Welcoming of Deities is!’
+As Su Ming was deep in his thoughts, Xiao Hong who was sprawled across his shoulders, grabbed his hair and hissed impatiently.
+Su Ming patted the little monkey’s head and jumped down the mountain peak. The wind blew against him. It made his shirt and hair flutter. It also made Xiao Hong clutch onto Su Ming’s hair tightly as it screamed in terror.
+Su Ming laughed. He grabbed onto a stone within his right hand’s reach as he fell. Once he regained his momentum, he jumped down again. With his current abilities, Su Ming arrived at the foot of Black Flame Mountain before long.
+Snow still covered the forests. They were really soft under his feet as well. He sank when he stepped on them. Su Ming then ran into the distance. He originally intended to return to the tribe but when he arrived at a crossroads, his footsteps faltered and he hesitated for a moment.
+Xiao Hong was sitting on Su Ming’s shoulders. It seemed to be in a comfortable position. Occasionally, it would sniff its right paw with an exhilarated expression. It was slightly surprised when it saw Su Ming stop. 
+The right path led back to his own tribe whereas the left path… Su Ming gazed at the path. It led to Dark Dragon Tribe.
+"I’ll just go and take a look… Xiao Hong, have you ever seen Bai Ling? Oh, that’s right, you’ve never seen her. Do you want to see her?" Su Ming asked softly.
+Xiao Hong widened its eyes. It scratched the fur on its face and did not make a sound.
+"Alright. Since you want to see her, I’ll let you look at her from afar," Su Ming spoke as if he suddenly had a perfectly logical reason to go to Dark Dragon Tribe. He smiled and patted Xiao Hong’s head. When Xiao Hong looked at him with an unamused expression, Su Ming ran down the left lane quickly.
+Su Ming arrived at the spot where he parted with Bai Ling when dusk arrived. The sun had turned red as it began to set. He squatted there and looked at the silhouette of Dark Dragon Tribe. He saw the other members of Dark Dragon Tribe moving in there but he did not see Bai Ling.
+After a long time, Su Ming sank into his thoughts. He did not know what he was thinking. He only thought that Bai Ling was pretty. She was the prettiest girl he had ever seen in his life and he wanted to look at her a few more times.
+After a moment of hesitation, he sat down quietly and chose not to take any action. Instead, he looked at the sky. When the sun was about to set and the sky about to darken completely, he stood up and walked forward briskly. He still kept a hint of awareness to his surroundings as he approached Dark Dragon Tribe. Nonetheless, he did not dare go too near the tribe. It was after all, not Dark Mountain Tribe. If he was discovered, there was a possibility he would be in danger. 
+While the relationship between Dark Mountain Tribe and Dark Dragon Tribe was not as tense as Dark Mountain Tribe and Black Mountain Tribe, it did not mean that they were at peace with each other. If they met in the wild, they still regarded each other with hostility. It would have been even more so if they had discovered Su Ming, who had been lingering outside Dark Dragon Tribe.
+"Ah… I shouldn’t have done this." Su Ming mumbled as he continued walking forward. When he was about 10,000 feet away from Dark Dragon Tribe, he stopped walking. Su Ming grew up in the tribe and had been regularly going out into the wild to collect herbs. On occasion, he even ran into members from Black Mountain Tribe.  Caution and vigilance was practically second nature to him. 
+He had seen too much violence in his life. Even if most of the violence happened to beasts which the hunting team brought back, living in such conditions for years had already influenced him unconsciously as a child. Besides, he had already killed someone!
+Not even Lei Chen had stained his hands with human blood before.
+As such, even if Su Ming wanted to see Bai Ling for some unknown reason, his instincts that were buried deep within told him to move only during the night. As an act of caution, Su Ming also chose to stop 10,000 feet away from the tribe.
+He squatted down and took a look at Dark Dragon Tribe. Then, he turned around resolutely without hesitation and left the area around Dark Dragon Tribe quickly.
+Yet just as he took a few steps forward, Su Ming felt goosebumps. A sense of danger far stronger than his meeting with the two Berserkers from Black Mountain Tribe came crashing towards him.
+As he leaped forward, he twisted his body abruptly and covered his head with both hands. His entire body curled into a ball as he hugged Xiao Hong tightly in his bosom, stopping in midair for a brief moment as if he was frozen.
+That moment, a sharp whistling sound sliced through the air. A long gigantic spear about 30 feet flew towards Su Ming like lightning from within the giant wooden fence surrounding Dark Dragon Tribe. It rushed past Su Ming’s body and stuck itself into the ground, creating a loud noise. The ground shook and snow flew into the air.   
+It also stirred up a wave of air which spread across a wide area around the spear. Su Ming was lucky he was cautious enough to avoid it beforehand. He landed on the ground as he moved along the air’s wave current and ran forward at full speed immediately.
+"Leaving?" A cold voice traveled from afar. A man with long hair wearing a shirt made of sackcloth chased after him with a fierce look in his eyes.
+As Su Ming ran forward, he turned back and looked at him with a cold glare in his eyes.
+""",
+                         chapter.content.text)
+
+    def test_parsing_chapter_41(self):
+        api = WebNovelComApi(self.browser)
+        chapter = api.get_chapter(parse_url('https://www.webnovel.com'
+                                            '/go/pcm/chapter/getContent'
+                                            '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
+                                            '&bookId=7853880705001905'
+                                            '&chapterId=21186868150328548'
+                                            '&_=1613685072806'))
+        self.assertIsNotNone(chapter)
+        self.assertTrue(isinstance(chapter, WebNovelComChapter))
+        self.assertFalse(chapter.success)
+        chapter.timestamp = datetime.fromtimestamp(1613677829.700)
+        self.assertTrue(chapter.parse())
+        self.assertTrue(chapter.success)
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
+                         '&bookId=7853880705001905'
+                         '&chapterId=21186868150328548'
+                         '&_=1613685072806', chapter.url.url)
+        self.assertEqual('https://www.webnovel.com', chapter.change_url(path=None, query=None).url)
+        self.assertEqual('Si Kong', chapter.title)
+        self.assertEqual(21186868150328548, chapter.chapter_id)
+        self.assertFalse(chapter.is_complete())
+        self.assertTrue(chapter.is_vip)
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
+                         '&bookId=7853880705001905'
+                         '&chapterId=21186817416027363'
+                         '&_=1613677829700', chapter.previous_chapter.url.url)
+        self.assertEqual('https://www.webnovel.com/go/pcm/chapter/getContent'
+                         '?_csrfToken=ea7e24b7-fd2c-494e-a940-ce49e1da393e'
+                         '&bookId=7853880705001905'
+                         '&chapterId=21186881303665893'
+                         '&_=1613677829700', chapter.next_chapter.url.url)
+        self.maxDiff = None
+        chapter.clean_content()
+        self.assertEqual("""The young man looked to be about 18 to 19 years old. He was strongly built. So much so that he could compete with Lei Chen. In his hands, he held a long spear. The spear was only about five feet long but its black body gave it a shocking and chilling aura. There was also a golden dazzle on the tip of the spear.
+However, the spear was essentially not made of stone. It was made out of a material Su Ming had never seen before. He looked back from afar and when his eyes landed on the spear, his heart froze in fear.
+It was a very, very familiar feeling.
+Yet, he did not know where that familiarity came from. Nonetheless, it made him feel that danger was looming over his head. Su Ming ignored everything else. Only a basic instinctual need for him to remain calm was left.
+‘That person is not wearing hides but is wearing sackcloth instead. This sort of clothes… This person must have a pretty high status in Dark Dragon Tribe!
+‘I don’t regret going near Dark Dragon Tribe!’ 
+""",
                          chapter.content.text)
 
 

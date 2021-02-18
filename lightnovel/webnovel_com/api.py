@@ -91,7 +91,7 @@ class WebNovelComNovelEntry(WebNovelCom, NovelEntry):
         self.id = int(json_data['id'])
         super().__init__(
             url=Url('https', host='www.webnovel.com', path=f"/book/{self.id}"),
-            title=json_data['name'].encode('latin1').decode('utf8'),  # turns 'â\x80\x99' into '´'
+            title=unescape_string(json_data['name']),  # turns 'â\x80\x99' into '´'
         )
 
 
@@ -139,7 +139,7 @@ class WebNovelComNovel(WebNovelCom, Novel):
         g_data = self._document.select_one('body.footer_auto > script')
         if not isinstance(g_data, Tag):
             raise Exception("Unexpected type of tag selection")
-        match = re.search(r"g_data\.book= (?P<json>{.*})$", g_data.text, re.MULTILINE)
+        match = re.search(r"g_data\.book ?= (?P<json>{.*});?$", g_data.text, re.MULTILINE)
         if not match:
             raise Exception("Failed to match for json data")
         json_str = match.group('json')
@@ -162,14 +162,7 @@ class WebNovelComNovel(WebNovelCom, Novel):
             )
             adapter.backup_and_miss_next_request = True
         # noinspection SpellCheckingInspection
-        chapter_list_url = Url(
-            'https', host='www.webnovel.com', path='/apiajax/chapter/GetChapterList',
-            query=dict_to_query({
-                '_csrfToken': self._session.cookies.get('_csrfToken'),
-                'bookId': self._novel_id,
-                '_': int(datetime.now().timestamp())
-            })
-        )
+        chapter_list_url = Url('https', host='www.webnovel.com', path='/apiajax/chapter/GetChapterList')
         response = self._session.get(chapter_list_url.url, params={
             '_csrfToken': self._session.cookies.get('_csrfToken'),
             'bookId': self._novel_id,
@@ -179,6 +172,9 @@ class WebNovelComNovel(WebNovelCom, Novel):
         book_info = json_data['bookInfo']
         self._title = book_info['bookName']
         self._books = self.__extract_books(json_data['volumeItems'])
+        if len(self._books) == 0:
+            self.log.error("No books were found!")
+            return False
         first_chapter = self._books[0].chapter_entries[0]
         self._first_chapter_path = f"{first_chapter.url.path}?{first_chapter.url.query}"
         return True
@@ -306,7 +302,7 @@ class WebNovelComChapter(WebNovelCom, Chapter):
 
 
 class WebNovelComFetchStrategy(ChapterFetchStrategy, ABC):
-    from qidianunderground_org import QidianUndergroundOrgApi
+    from lightnovel.qidianunderground_org import QidianUndergroundOrgApi
     _qidian_underground_api: QidianUndergroundOrgApi = None
     _api: LightNovelApi = None
 
@@ -371,7 +367,7 @@ class WebNovelComFetchStrategy(ChapterFetchStrategy, ABC):
 
     def _acquire_qidian_underground_api(self):
         if not self._qidian_underground_api:
-            from qidianunderground_org import QidianUndergroundOrgApi
+            from lightnovel.qidianunderground_org import QidianUndergroundOrgApi
             self._qidian_underground_api = QidianUndergroundOrgApi(self._api.session)
 
 
@@ -397,7 +393,7 @@ class UpdatedPlusQUChapterFetchStrategy(WebNovelComFetchStrategy):
 
 
 class WebNovelComApi(WebNovelCom, LightNovelApi):
-    from qidianunderground_org import QidianUndergroundOrgApi
+    from lightnovel.qidianunderground_org import QidianUndergroundOrgApi
     _qidian_underground_api: QidianUndergroundOrgApi = None
 
     @property
@@ -457,12 +453,12 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
         self._session.cookies.set_cookie(create_cookie('e2', '',
                                                        # '{"pid":"qi_p_googleonetap","eid":"qi_I01","l1":1}',
                                                        domain='.webnovel.com', path='/'))
-        response = self._session.post("https://www.webnovel.com/apiajax/search/AutoCompleteAjax", headers={
+        response = self._session.post("https://www.webnovel.com/go/pcm/search/autoComplete", headers={
             'Accept': 'application/json, text/javascript, */*; q=0.01',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'Upgrade-Insecure-Requests': None,
             'X-Requested-With': 'XMLHttpRequest',
-        }, data=encode_form_data(data))
+        }, data=encode_form_data(data).replace('+', ' '))
         if isinstance(self.adapter, FileCacheAdapter):
             self.adapter.use_cache = True
         if len(response.text) == 0:
@@ -473,7 +469,7 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
             self.log.error(f"Api returned error {data['code']}: {data['msg']}")
             return []
         entries = []
-        for item in data.get('data', {}).get('books', []):
+        for item in data.get('data', {}).get('searchAssociationItems', []):
             entries.append(WebNovelComNovelEntry(item))
         return entries
 
