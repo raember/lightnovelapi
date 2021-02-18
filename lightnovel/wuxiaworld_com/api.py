@@ -181,7 +181,7 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
         self._release_date = datetime.fromisoformat(json_data['datePublished'])
         for tag in head.select('script[type="text/javascript"]'):
             if "karmaActive" in tag.text:
-                self._karma_active = "karmaActive: true" in tag.text
+                self._karma_active = '"karmaActive":true' in tag.text
         if self._karma_active:
             self.log.warning("This novel might require karma points to unlock chapters.")
         meta_image = head.select_one('meta[property="og:image"]')
@@ -191,15 +191,15 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
         p15 = self._document.select_one('div.p-15')
         if not isinstance(p15, Tag):
             raise Exception("Unexpected type of tag selection")
-        self._tags = self.__extract_tags(p15)
+        self._tags = self.__extract_tags()
         self._description = p15.select('div.fr-view')[1]
         self._books = self.__extract_books(p15)
         self._language = 'en'
         return True
 
-    def __extract_tags(self, p15: Tag) -> List[str]:
+    def __extract_tags(self) -> List[str]:
         tags = []
-        for tag_html in p15.select('div.media.media-novel-index div.media-body div.tags a'):
+        for tag_html in self._document.select('div.genres a'):
             tag = tag_html.text.strip()
             tags.append(tag)
         self.log.debug(f"Tags found: {tags}")
@@ -239,7 +239,6 @@ class WuxiaWorldComNovel(WuxiaWorldCom, Novel):
 class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
     _chapter_id: int
     _is_teaser: bool
-    _karma_locked: bool
 
     @property
     def chapter_id(self) -> int:
@@ -248,10 +247,6 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
     @property
     def is_teaser(self) -> bool:
         return self._is_teaser
-
-    @property
-    def karma_locked(self) -> bool:
-        return self._karma_locked
 
     def _parse(self) -> bool:
         head = self._document.select_one('head')
@@ -263,7 +258,6 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
         url = parse_url(link.get('href'))
         if url.path.startswith('/preview') or url.path.startswith('/Error'):
             return False
-        self._karma_locked = False  # For is_complete() to run smoothly
         if self.is_complete():
             json_data = None
             for script_tag in head.select('script'):
@@ -286,9 +280,6 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
             if not isinstance(content, Tag):
                 raise Exception("Unexpected type of tag selection")
             self._content = content
-            self._karma_locked = self._is_karma_locked()
-            if self._karma_locked:
-                self.log.warning("This chapter requires karma points to unlock.")
             return True
         return False
 
@@ -296,10 +287,7 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
         meta_description = self._document.select_one('head meta[name="description"]')
         if not isinstance(meta_description, Tag):
             raise Exception("Unexpected type of description meta data")
-        return meta_description.has_attr('content') and not self.karma_locked
-
-    def _is_karma_locked(self) -> bool:
-        return self._content.select_one('div.col-block') is not None
+        return meta_description.has_attr('content')
 
     def clean_content(self):
         bs = BeautifulSoup(features="html5lib")
@@ -349,7 +337,7 @@ class WuxiaWorldComChapter(WuxiaWorldCom, Chapter):
                             tags_cnt = max_tags_cnt
                 elif child.name == 'hr':
                     new_content.append(child)
-                elif child.name == 'a':
+                elif child.name in ('a', 'script'):
                     continue
                 elif child.name in ['ol', 'ul']:
                     new_content.append(child)

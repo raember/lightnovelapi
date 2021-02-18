@@ -1,11 +1,10 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime
 
 from requests.cookies import RequestsCookieJar
 from spoofbot.adapter import HarAdapter
 from urllib3.util import parse_url
 
-from api import UNKNOWN
 from lightnovel.wuxiaworld_com import WuxiaWorldComNovel, WuxiaWorldComChapter, WuxiaWorldComApi
 from tests.config import Har, prepare_browser
 # noinspection SpellCheckingInspection
@@ -35,13 +34,13 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change', novel.url.url)
         self.assertEqual('https://www.wuxiaworld.com', novel.change_url(path=None).url)
         self.assertEqual('Heavenly Jewel Change', novel.title)
-        self.assertEqual(UNKNOWN, novel.author)
+        self.assertEqual('Tang Jia San Shao (唐家三少)', novel.author)
         self.assertListEqual(['Stardu5t'], novel.translators)
-        self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.copyright)
-        self.assertEqual(datetime(2015, 11, 7, 4, 3, 42, tzinfo=timezone.utc), novel.release_date)
+        self.assertEqual('Copyright © 2018-2021 WuxiaWorld. All rights reserved.', novel.copyright)
+        self.assertEqual(datetime(2015, 11, 7, 0, 0), novel.release_date)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01',
                          novel.generate_chapter_entries().__next__()[1].url.path)
-        self.assertListEqual(['Chinese', 'Ongoing'], novel.tags)
+        self.assertListEqual(['Action', 'Xuanhuan'], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/hjc.jpg?ver=f83790a5f2ff64bb6524c2cfd207845ba1d25ac6',
             novel.cover_url.url)
@@ -73,7 +72,7 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
                          "Heavenly Jewel Masters.Heavenly Jewel Masters have a highest "
                          "level of 12 pairs of jewels, as such their training progress "
                          "is known as Heavenly Jewels 12 Changes.Our MC here is an "
-                         "archer who has such a pair of Heavenly Jewels.\n",
+                         "archer who has such a pair of Heavenly Jewels.\n ",
                          novel.description.text
                          )
         self.assertEqual(7, len(novel.books))
@@ -81,7 +80,7 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
         self.assertEqual('Volume 1', book.title)
         self.assertEqual(27, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
-        self.assertEqual('Chapter 1 Big Sis, Im afraid this is a misunderstanding! (1)', chapter.title)
+        self.assertEqual('Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (1)', chapter.title)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.url.path)
         book = novel.books[1]
         self.assertEqual('Volume 2', book.title)
@@ -100,7 +99,7 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
         self.assertEqual(55, len(book.chapter_entries))
         book = novel.books[6]
         self.assertEqual('Remaining Chapters (To be sorted)', book.title)
-        self.assertEqual(697, len(book.chapter_entries))
+        self.assertEqual(720, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
         api = WuxiaWorldComApi(self.browser)
@@ -222,11 +221,11 @@ class WuxiaWorldComApiWmwTest(unittest.TestCase):
         self.assertEqual('Warlock of the Magus World', novel.title)
         self.assertEqual('The Plagiarist', novel.author)
         self.assertListEqual(['OMA'], novel.translators)
-        self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.copyright)
+        self.assertEqual('Copyright © 2018-2021 WuxiaWorld. All rights reserved.', novel.copyright)
         self.assertEqual(datetime(2016, 6, 8), novel.release_date)
         self.assertEqual('/novel/warlock-of-the-magus-world/wmw-chapter-1',
                          novel.generate_chapter_entries().__next__()[1].url.path)
-        self.assertListEqual(['Chinese', 'Completed', 'Completed Recs'], novel.tags)
+        self.assertListEqual(['Alchemy', 'Fantasy', 'Mature', 'Political Intrigue'], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/wmw.jpg?ver=2839cf223fce0da2ff6da6ae32ab0c4e705eee1a',
             novel.cover_url.url)
@@ -360,202 +359,12 @@ Still, he did not leave. No matter what, he still had to eat.
                          chapter.content.text)
 
 
-# noinspection SpellCheckingInspection,DuplicatedCode
-class WuxiaWorldComApiSFFTest(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.browser = prepare_browser(Har.WW_SFF_Cover_C1_78F)
-        adapter = cls.browser.adapter
-        if isinstance(adapter, HarAdapter):
-            adapter.match_header_order = False
-            adapter.match_headers = False
-            adapter.match_data = False
-            adapter.delete_after_matching = False
-
-    def test_parsing_novel(self):
-        api = WuxiaWorldComApi(self.browser)
-        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/stop-friendly-fire'))
-        self.assertIsNotNone(novel)
-        self.assertTrue(isinstance(novel, WuxiaWorldComNovel))
-        self.assertFalse(novel.success)
-        self.assertTrue(novel.parse())
-        self.assertTrue(novel.success)
-        self.assertFalse(novel.karma_active)
-        self.assertEqual('https://www.wuxiaworld.com', novel.change_url(path=None).url)
-        self.assertEqual('/novel/stop-friendly-fire', novel.url.path)
-        self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire', novel.url.url)
-        self.assertEqual('Stop, Friendly Fire!', novel.title)
-        self.assertEqual('Toy Car (토이카)', novel.author)
-        self.assertListEqual(['Boko'], novel.translators)
-        self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.copyright)
-        self.assertEqual(datetime(2018, 9, 17), novel.release_date)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1',
-                         novel.generate_chapter_entries().__next__()[1].url.path)
-        self.assertListEqual(['Completed', 'Korean'], novel.tags)
-        self.assertEqual(
-            'https://cdn.wuxiaworld.com/images/covers/sff.jpg?ver=071937f5ef5b2d5c24cf1ae552850cd19f4b837d',
-            novel.cover_url.url)
-        self.assertEqual('\nThe empire has turned into the land of the undead due to a spell gone wrong. God summoned '
-                         'heroes from countless worlds to purify the empire and plant new hope. Lee Shin Woo, '
-                         'an ordinary earthling, was also summoned. As an undead, that is.\xa0\n',
-                         novel.description.text
-                         )
-        self.assertEqual(13, len(novel.books))
-        book = novel.books[0]
-        self.assertEqual('Volume 1', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        chapter = book.chapter_entries[0]
-        self.assertEqual('Prologue. This Trade is a Draw', chapter.title)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', chapter.url.path)
-        book = novel.books[1]
-        self.assertEqual('Volume 2', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[2]
-        self.assertEqual('Volume 3', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[3]
-        self.assertEqual('Volume 4', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[4]
-        self.assertEqual('Volume 5', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[5]
-        self.assertEqual('Volume 6', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[6]
-        self.assertEqual('Volume 7', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[7]
-        self.assertEqual('Volume 8', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[8]
-        self.assertEqual('Volume 9', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[9]
-        self.assertEqual('Volume 10', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[10]
-        self.assertEqual('Volume 11', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[11]
-        self.assertEqual('Volume 12', book.title)
-        self.assertEqual(23, len(book.chapter_entries))
-        book = novel.books[12]
-        self.assertEqual('Volume 13', book.title)
-        self.assertEqual(26, len(book.chapter_entries))
-
-    def test_parsing_chapter_1(self):
-        api = WuxiaWorldComApi(self.browser)
-        chapter = api.get_chapter(parse_url('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1'))
-        self.assertIsNotNone(chapter)
-        self.assertTrue(isinstance(chapter, WuxiaWorldComChapter))
-        self.assertFalse(chapter.success)
-        self.assertTrue(chapter.parse())
-        self.assertTrue(chapter.success)
-        self.assertEqual('https://www.wuxiaworld.com/novel/stop-friendly-fire/sff-chapter-1', chapter.url.url)
-        self.assertEqual('https://www.wuxiaworld.com', chapter.change_url(path=None).url)
-        self.assertEqual("Prologue. This Trade is a Draw", chapter.title)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-1', chapter.url.path)
-        self.assertEqual(63263, chapter.chapter_id)
-        self.assertFalse(chapter.is_teaser)
-        self.assertIsNone(chapter.previous_chapter)
-        self.assertEqual('/novel/stop-friendly-fire/sff-chapter-2', chapter.next_chapter.url.path)
-        self.maxDiff = None
-        chapter.clean_content()
-        self.assertEqual("""
-"Now, let's clear things up."
-The woman put down the tobacco pipe she had been gently biting down on, puffed out the smoke, and licked her lips. She was a beautiful woman with striking red, wavy hair, but more importantly was the fact that she was a 'god'.\xA0
-"So, what you desire is... an immortal body and infinite growth potential?"
-"Yes!"
-"Nope, not possible. Go back."
-"Aw, don't be like that."
-The man, a 27-year-old man called Lee Shin Woo, sat opposite from the woman, separated by an antique desk. He was an ordinary office worker who liked fantasy novels and games. Well, at least until he died.\xA0
-And now that he'd died, he was a hero that had been chosen by a god. Probably.\xA0
-"I heard that I still had a long life ahead of me, yet I died prematurely. Shouldn’t I receive at least this much from a god since I died so unfairly?"
-"Jeez, the novels these days have really spoilt these kids' backbone. Before, if I told them they were getting a second chance, they would go 'yippee' or yell 'call'."
-"Well, people change as the times go by."
-Though God wanted to hit Lee Shin Woo, who had nonchalantly nodded his head and replied to her, she restrained herself. After all, it was none other than her who had gathered the souls of those who had died unfairly, because she needed their help.\xA0
-'If he was from my world, then I would've just...'
-She was certainly a god, but she wasn't the god of Earth. She was the god who reigned over Heguroa, which differed in culture, history, size, and every other aspect from Earth.\xA0
-Then why was she in a situation where she had to bring souls from another world? There was a truly sad, tear-jerking reason behind that.\xA0
-"Anyhow, those guys sure are cold-hearted. Their god is saying that she'll get herself involved and clean up their mess, but they're just avoiding it since they don't want to die."
-"There were a lot of heroes who accepted my revelation, you know!? ...They all just died in Heita."
-Lee Shin Woo instinctively gulped and asked God.
-"... Is the place that dangerous?"
-"Of course, it is."
-God couldn't hide her bitterness, and responded for a second time, putting the tobacco pipe back into her mouth. If she didn't at least do that, she felt like she would've sighed in front of a human.
-This was a story that happened several decades ago. Heita, a great empire that thrived in the undergrounds of Heguroa, was met with tragedy. Their emperor, Jissehanu, dreamt of immortality and researched forbidden black magic, but as a consequence of his recklessness... the entire underground empire received an undead curse.
-What's worse, the curse would spread gradually, and if left unchecked, would devour the entire world.\xA0
-God, recognizing the severity of the situation, passed down a divine revelation to all humans and promised that she would grant a wish to the savior of the Empire.\xA0
-There were many heroic men who came forward. But all of them failed. The curse deeply rooted in the Empire was strong, and the heroes who headed underground in order to save the Empire couldn't overcome the curse, degenerating into the undead, and becoming a part of the undead empire.\xA0
-Only after did God decide to exhibit her power more extensively. She scattered and planted her power across the Empire, encouraging the heroes, but it didn't help. The influence of the Empire, which sought to lead all life to undeath, gradually increased, and devoured half of the continent...
-And that's when God, unable to endure any further, decided that she had to stop the Empire, even if it meant dragging heroes from other worlds. Lee Shin Woo was also one of them.\xA0
-"Still, an immortal body is impossible. Ask for something else."
-"Then please give me something similar."
-"Listen, kid."
-God raised her tobacco pipe and pointed at Lee Shin Woo's shabby soul as she explained.\xA0
-"Tremendous power burdens the owner. An immortal body? Infinite growth potential? You won't be able to handle such power, and you'll just explode and die. So, go on and offer more realistic, and fitting conditions."
-"But with a realistic and fitting power, I'll probably end up like my seniors, dying without being able to do anything."
-"..."
-At that moment, the human's words thrust deep into the god's heart. Right now, Lee Shin Woo was practically declaring to the god that her 'struggles were meaningless'. Why should I hear this from a mere hero candidate? Should I just kill him? God momentarily felt the impulse to do just that, but... changed her mind upon seeing the human's challenging expression.\xA0
-This kid would have to go through hell before he could even understand her a little.
-"Alright, I'll do as you ask."
-"Yeah!"
-"Of course, a perfect immortal body is impossible. You won't die ordinarily, but you'll still die in deadly situations."
-"What about the infinite growth potential?"
-"That's also up to you, but I'll make it so it's theoretically possible."
-"Oh!"
-"In exchange."
-God flicked her tobacco pipe, and ash flew through the air.\xA0
-"You'll lose something very important. Your normal, physical body can't accept that power."
-"What exactly is that important thing? I'm not going to become impotent, or become bald, am I?"
-"This is the best I can do. Now... Lee Shin Woo. Are you going to do it, or not?"
-She didn't answer his question. He faced God's spiteful, cold eyes, and he briefly felt conflicted, but.... he ultimately nodded his head and spoke. Even if he were to become impotent, or become bald, there's a time when a man needs to take the risk!
-"Alright, I'll do it!"
-"Fine, then our contract has been established."
-God put the pipe into her mouth again, and simultaneously, Lee Shin Woo's body was enveloped in a bright light. Transmission magic that would transport his soul to the Heita Empire had been activated.\xA0
-"You'll be sent to the entrance of the Empire. Once you arrive there, I won't be able to help you directly, but I'll send you quests instead. You know what quests are, right?"
-"Yes."
-"Good, and when you arrive, remember to check your status first. It's really important that you know who 'you' are."
-"Ok...?"
-It seemed as though God had grinned and laughed wickedly when she put the tobacco pipe into her mouth, but... he was soon shrouded by a bright light and was unable to see anything.\xA0
-In the next moment, the light disappeared, and Lee Shin Woo's body was dumped onto the cold floor. The transfer was done in the blink of an eye.\xA0
-"Oof! She could have let me down a little more gently... hoo."
-Lee Shin Woo grumbled softly and stood up. He had been dumped into an enormous underground cave, as expected of an underground empire.\xA0
-There was a passageway on both of his sides, and it felt eerie as if mummies would pop out at any minute from all sides. At least there weren't any enemies nearby.\xA0
-"I was ready for this, but... this feels really serious... it's cold, too."
-He felt cold, perhaps because he didn't have any clothes on. He stroked his skin in order to soothe the cold, but he soon realized that something was off.
-"Huh?"
-His body was hard. The hand that had touched his body was also really hard. When he raised his hand to see what was going on, there were bones, rather than a human hand.\xA0
-"...Huh?"
-Shin Woo was so shocked that he went stiff for a while. He somehow got a hold of himself, and when he moved his hand, the bones naturally bobbed. The five fingers composed of bone truly began to dance rhythmically in the air.\xA0
-"Hahaha... no way. Haha, this guy."
-It was such an unrealistic sight that he laughed automatically. For the first time, Lee Shin Woo bowed his head and observed his body, but his entire body was obviously all bone.\xA0
-"..."
-The moment he saw that his mind blanked.\xA0
-What do I do? Is this by any chance God's mistake? Did I perhaps receive the Empire's curse as soon as I arrived, and became an undead? Then, he remembered what God had said before their sudden parting.
-"That's it. Status... She told me to check my status as soon as I arrived."
-The moment Shin Woo said the word status, as though he had just grabbed onto a final strand of hope, a strange row of text was engraved in the air in front of him. It was similar to what he had often seen in the games when he was alive. Yeah, even the contents written within...
-[Lee Shin Woo]
-[Normal Skeleton Blessed by God]
-[Lv - 1]
-[Strength - 13, Agility - 13, Health - 13, Magic - 3]
-[Passive skills - Invisible Heart Lv1]
-[Active skills - Bone Reinforcement Lv1]
-"..."
-The wind passed by his smooth (bald) skull, and his empty (impotent) crotch.\xA0
-It only took around... 10 minutes before Lee Shin Woo figured out that this was neither God's mistake, nor the Empire's curse.
-""".replace('\n', ''),
-                         chapter.content.text)
-
-
 # noinspection SpellCheckingInspection
 class WuxiaWorldComApiASTTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.browser = prepare_browser(Har.WW_AST_Cover_C1_102)
+        cls.browser = prepare_browser(Har.WW_AST_Cover_C1_101)
         adapter = cls.browser.adapter
         if isinstance(adapter, HarAdapter):
             adapter.match_header_order = False
@@ -565,7 +374,7 @@ class WuxiaWorldComApiASTTest(unittest.TestCase):
 
     def test_parsing_novel(self):
         api = WuxiaWorldComApi(self.browser)
-        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique'))
+        novel = api._get_novel(parse_url('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/'))
         self.assertIsNotNone(novel)
         self.assertTrue(isinstance(novel, WuxiaWorldComNovel))
         self.assertFalse(novel.success)
@@ -573,16 +382,18 @@ class WuxiaWorldComApiASTTest(unittest.TestCase):
         self.assertTrue(novel.success)
         self.assertTrue(novel.karma_active)
         self.assertEqual('https://www.wuxiaworld.com', novel.change_url(path=None).url)
-        self.assertEqual('/novel/ancient-strengthening-technique', novel.url.path)
-        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique', novel.url.url)
+        self.assertEqual('/novel/ancient-strengthening-technique/', novel.url.path)
+        self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/', novel.url.url)
         self.assertEqual('Ancient Strengthening Technique', novel.title)
         self.assertEqual('I Am Superfluous', novel.author)
         self.assertListEqual(['lordbluefire_98448380'], novel.translators)
-        self.assertEqual('Copyright © 2018 WuxiaWorld. All rights reserved.', novel.copyright)
+        self.assertEqual('Copyright © 2018-2021 WuxiaWorld. All rights reserved.', novel.copyright)
         self.assertEqual(datetime(2016, 11, 30, 0, 0), novel.release_date)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1',
                          novel.generate_chapter_entries().__next__()[1].url.path)
-        self.assertListEqual(['Chinese', 'Completed', 'Completed Recs'], novel.tags)
+        self.assertListEqual([
+            'Action', 'Alchemy', 'Comedy', 'Cooking', 'Crafting', 'Fantasy', 'Mature', 'Romance', 'Xuanhuan'
+        ], novel.tags)
         self.assertEqual(
             'https://cdn.wuxiaworld.com/images/covers/ast.jpg?ver=3113ede98eb17afea8006f0024b2290aecd68c05',
             novel.cover_url.url)
@@ -682,7 +493,6 @@ class WuxiaWorldComApiASTTest(unittest.TestCase):
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.url.path)
         self.assertEqual(14875, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
-        self.assertFalse(chapter.karma_locked)
         self.assertIsNone(chapter.previous_chapter)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-2', chapter.next_chapter.url.path)
         self.maxDiff = None
@@ -770,7 +580,6 @@ Editor: Ziltch
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-101', chapter.url.path)
         self.assertEqual(14974, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
-        self.assertTrue(chapter.karma_locked)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-100', chapter.previous_chapter.url.path)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-102', chapter.next_chapter.url.path)
 
