@@ -13,9 +13,9 @@ from requests import Session
 from spoofbot import Browser
 from spoofbot.adapter import FileCacheAdapter
 
-from api import Book, Chapter, Novel
-from epub import EpubFile, BookFile, ChapterFile
-from util import slugify, make_sure_dir_exists
+from lightnovel.api import Book, Chapter, Novel
+from lightnovel.epub import EpubFile, BookFile, ChapterFile
+from lightnovel.util import slugify, make_sure_dir_exists
 
 
 class Pipeline(ABC):
@@ -138,6 +138,7 @@ class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
         super().__init__(novel, 'epub', out_path)
 
     # TODO: Allow for incremental addition of new chapters
+    # noinspection PyUnresolvedReferences
     def wrap(self, gen: Generator[Tuple[Book, Chapter], None, None]) -> Generator[Tuple[Book, Chapter], None, None]:
         unique_id = slugify(self.novel.title)
         filepath = self.join_to_path(self.filename)

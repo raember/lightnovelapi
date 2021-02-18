@@ -8,10 +8,10 @@ from requests.cookies import create_cookie
 from spoofbot.adapter import FileCacheAdapter
 from urllib3.util.url import parse_url, Url
 
-from api import UNKNOWN
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, NovelEntry
-from util.privatebin import decrypt
-from util.text import unescape_string
+from lightnovel.api import UNKNOWN
+from lightnovel.util.privatebin import decrypt
+from lightnovel.util.text import unescape_string
 
 
 class QidianUndergroundOrg:
@@ -48,6 +48,7 @@ class QidianUndergroundOrgNovel(QidianUndergroundOrg, Novel):
     _chapters: List[dict]
 
     def __init__(self, title: str, chapters: list):
+        # noinspection PyTypeChecker
         super().__init__(Url(self._hoster_homepage.scheme, host=self._hoster_homepage.hostname), None)
         self._title = title
         self._index_to_chapter_entry = {}

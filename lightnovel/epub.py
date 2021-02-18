@@ -10,8 +10,8 @@ from PIL.Image import Image
 # noinspection PyProtectedMember
 from bs4 import BeautifulSoup, Tag, PageElement
 
-from api import Book, Chapter
-from util import slugify, sanitize_for_html
+from .api import Book, Chapter
+from .util import slugify, sanitize_for_html
 
 
 class EpubEntry(ABC):
@@ -240,7 +240,7 @@ class ChapterFile(XHtmlFile):
     def __init__(self, chapter: Chapter):
         super().__init__()
         self.chapter = chapter
-        book_n = chapter.book.number
+        book_n = chapter.book.index
         chapter_n = chapter.index
         self.sanitized_title = sanitize_for_html(chapter.extract_clean_title())
         self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.extract_clean_title())}.xhtml"

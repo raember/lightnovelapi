@@ -12,8 +12,8 @@ from spoofbot.adapter import FileCacheAdapter
 from spoofbot.util import encode_form_data
 from urllib3.util.url import parse_url, Url
 
-from api import UNKNOWN
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, NovelEntry
+from lightnovel.api import UNKNOWN
 
 
 class WuxiaWorldCom:
