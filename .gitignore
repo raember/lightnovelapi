@@ -213,3 +213,5 @@ dmypy.json
 out
 # Settings (login credentials)
 settings.py
+# test data
+test_data
