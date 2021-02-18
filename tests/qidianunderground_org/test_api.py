@@ -20,11 +20,11 @@ class QidianUndergroundOrgPoTTest(unittest.TestCase):
         if isinstance(cls.har_adapter, HarAdapter):
             cls.har_adapter.match_header_order = False
             cls.har_adapter.match_headers = False
-            cls.har_adapter.match_data = False
+            cls.har_adapter.match_data = True
             cls.har_adapter.delete_after_matching = False
         cls.file_cache_adapter = FileCacheAdapter(resolve_path('.cache'))
         # Get the csrf cookie
-        # cls.browser.navigate('https://toc.qidianunderground.org/')
+        cls.browser.navigate('https://toc.qidianunderground.org/')
         cls.api = QidianUndergroundOrgApi(cls.browser)
 
     def test_searching_novel(self):
