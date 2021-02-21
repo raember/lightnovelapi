@@ -17,7 +17,6 @@ from urllib3.util.url import parse_url, Url
 from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, NovelEntry, ChapterFetchStrategy
 from lightnovel.qidianunderground_org import QidianUndergroundOrgNovel, QidianUndergroundOrgChapter
 from lightnovel.util import dict_to_query
-from util.text import unescape_string
 
 
 class WebNovelCom:
