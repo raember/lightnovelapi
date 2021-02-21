@@ -874,8 +874,8 @@ class LightNovelApi(Hosted, ABC):
         :return: An instance of a LightNovelApi.
         """
         if apis is None:
-            from wuxiaworld_com import WuxiaWorldComApi
-            from webnovel_com import WebNovelComApi
+            from lightnovel.wuxiaworld_com import WuxiaWorldComApi
+            from lightnovel.webnovel_com import WebNovelComApi
             apis = [
                 WuxiaWorldComApi(),
                 WebNovelComApi(),

@@ -8,7 +8,7 @@ from urllib3.util import parse_url
 from lightnovel.wuxiaworld_com import WuxiaWorldComNovel, WuxiaWorldComChapter, WuxiaWorldComApi
 from tests.config import Har, prepare_browser
 # noinspection SpellCheckingInspection
-from wuxiaworld_com.api import Genre
+from lightnovel.wuxiaworld_com.api import Genre
 
 
 # noinspection SpellCheckingInspection,DuplicatedCode

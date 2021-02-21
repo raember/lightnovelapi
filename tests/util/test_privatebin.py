@@ -2,7 +2,7 @@ import unittest
 
 from urllib3.util import parse_url
 
-from util.privatebin import decrypt
+from lightnovel.util.privatebin import decrypt
 
 
 class PrivateBinTest(unittest.TestCase):

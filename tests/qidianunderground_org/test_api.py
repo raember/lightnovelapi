@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 
 from spoofbot.adapter import FileCacheAdapter, HarAdapter
 
-from qidianunderground_org import QidianUndergroundOrgApi, QidianUndergroundOrgChapter, QidianUndergroundOrgNovel
-from qidianunderground_org.api import QidianUndergroundOrgNovelEntry
+from lightnovel.qidianunderground_org import QidianUndergroundOrgApi, QidianUndergroundOrgChapter, QidianUndergroundOrgNovel
+from lightnovel.qidianunderground_org.api import QidianUndergroundOrgNovelEntry
 from tests.config import prepare_browser, Har, resolve_path
 
 # noinspection SpellCheckingInspection

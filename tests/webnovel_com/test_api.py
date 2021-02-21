@@ -7,7 +7,7 @@ from spoofbot.util import TimelessRequestsCookieJar
 from urllib3.util import parse_url
 
 from tests.config import prepare_browser, Har
-from webnovel_com import WebNovelComApi, WebNovelComNovel, WebNovelComChapter
+from lightnovel.webnovel_com import WebNovelComApi, WebNovelComNovel, WebNovelComChapter
 
 # noinspection SpellCheckingInspection
 logging.getLogger('chardet.charsetprober').setLevel(logging.ERROR)
