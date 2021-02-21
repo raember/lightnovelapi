@@ -39,4 +39,4 @@ def unescape_string(string: str) -> str:
     :param string: The string to unescape.
     :return: The unescaped string.
     """
-    return string.encode('utf8').decode('unicode-escape').replace(r'\'', '')  # .replace(r"\'", "'").replace('\"', '"')
+    return string.replace(u'\xa0', ' ').encode('utf8').decode('unicode-escape').replace(r'\'', '')  # .replace(r"\'", "'").replace('\"', '"')

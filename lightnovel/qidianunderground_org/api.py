@@ -205,7 +205,7 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
             novels = self._get_json_document(parse_url('https://toc.qidianunderground.org/api/v1/pages/public'))
             for novel in novels:
                 self._novels.append(QidianUndergroundOrgNovelEntry(
-                    title=unescape_string(novel['Name']),
+                    title=novel['Name'].replace(u'\xa0', ' '),
                     novel_id=novel['ID'],
                     last_update=datetime.utcfromtimestamp(int(novel['LastUpdated'])),
                     complete=(novel.get('Status', '(Airing)') == '(Completed)')  # (Completed), (Trial) or non existent
@@ -261,7 +261,7 @@ class QidianUndergroundOrgApi(QidianUndergroundOrg, LightNovelApi):
         self._populate_novel_list()
         entries = []
         for novel in self._novels:
-            if title.lower() in novel.title.lower():
+            if title.lower().strip() in novel.title.lower().strip():
                 if not complete or complete and complete == novel.complete:
                     entries.append(novel)
         return entries
