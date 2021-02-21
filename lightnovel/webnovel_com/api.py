@@ -91,7 +91,7 @@ class WebNovelComNovelEntry(WebNovelCom, NovelEntry):
         self.id = int(json_data['id'])
         super().__init__(
             url=Url('https', host='www.webnovel.com', path=f"/book/{self.id}"),
-            title=unescape_string(json_data['name']),  # turns 'â\x80\x99' into '´'
+            title=html.unescape(json_data['name']),
         )
 
 
@@ -470,14 +470,15 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
             return []
         entries = []
         for item in data.get('data', {}).get('searchAssociationItems', []):
-            entries.append(WebNovelComNovelEntry(item))
+            if item['type'] == 0:
+                entries.append(WebNovelComNovelEntry(item))
         return entries
 
     def search_for_specific_title(self, title: str) -> List[WebNovelComNovelEntry]:
         title_len = len(title)
         starting_length = 7
         min_length = 2
-        max_length = 12
+        max_length = 25
         search_from1 = min(starting_length, title_len)
         search_to1 = min(title_len, max_length)
         search_from2 = min(min_length, title_len)
