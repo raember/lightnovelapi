@@ -40,3 +40,22 @@ def unescape_string(string: str) -> str:
     :return: The unescaped string.
     """
     return string.replace(u'\xa0', ' ').encode('utf8').decode('unicode-escape').replace(r'\'', '')  # .replace(r"\'", "'").replace('\"', '"')
+
+
+def normalize_string(string: str) -> str:
+    """
+    Normalizes strings by substituting certain unicode characters with ascii variants.
+
+    :param string: The string to normalize.
+    :return: The normalized string.
+    """
+    subs = {
+        u'\xa0': ' ',
+        '？': '?',
+        '：': ':',
+        '’´`': "'",
+        '—': '-',
+    }
+    for char, sub in subs.items():
+        string = string.replace(char, sub)
+    return string
