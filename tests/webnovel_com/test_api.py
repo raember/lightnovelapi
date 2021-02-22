@@ -6,8 +6,8 @@ from spoofbot.adapter import HarAdapter
 from spoofbot.util import TimelessRequestsCookieJar
 from urllib3.util import parse_url
 
-from tests.config import prepare_browser, Har
 from lightnovel.webnovel_com import WebNovelComApi, WebNovelComNovel, WebNovelComChapter
+from tests.config import prepare_browser, Har
 
 # noinspection SpellCheckingInspection
 logging.getLogger('chardet.charsetprober').setLevel(logging.ERROR)
@@ -31,8 +31,8 @@ class WuxiaWorldComApiRITest(unittest.TestCase):
         api = WebNovelComApi(self.browser)
         results = api.search('Renegade Immortal')
         self.assertIsNotNone(results)
-        self.assertEqual(3, len(results))
-        result = results[1]
+        self.assertEqual(2, len(results))
+        result = results[0]
         self.assertEqual('Renegade Immortal', result.title)
         self.assertEqual(8094127105005005, result.id)
         self.assertEqual('https://www.webnovel.com/book/8094127105005005', result.url.url)
