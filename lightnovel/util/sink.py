@@ -145,6 +145,7 @@ class MarkdownHtmlSink(HtmlSink):
         return f"~~{self._parse_sub_tags(tag)}~~"
 
 
+# noinspection SpellCheckingInspection
 class LatexHtmlSink(HtmlSink):
 
     def _parse_navigable_string(self, string: NavigableString) -> str:
