@@ -51,12 +51,14 @@ class CssFile(EpubEntry, ABC):
 
 
 class OpfFile(EpubEntry, ABC):
+    # noinspection SpellCheckingInspection
     mime_type = 'application/oebps-package+xml'
     ext = 'opf'
     content: BeautifulSoup = None
 
 
 class NcxFile(EpubEntry, ABC):
+    # noinspection SpellCheckingInspection
     mime_type = 'application/x-dtbncx+xml'
     ext = 'ncx'
     content: BeautifulSoup = None
@@ -68,6 +70,7 @@ class MimeTypeFile(EpubEntry):
 
 
 class ContentFile(OpfFile):
+    # noinspection SpellCheckingInspection
     filepath = 'OEBPS/content.opf'
     content: BeautifulSoup
     package: BeautifulSoup
@@ -175,7 +178,7 @@ class ContentFile(OpfFile):
         tag = None
         try:
             tag = self.metadata.select_one(f'dc\\:{key}')
-        except AttributeError as ae:
+        except AttributeError:
             # BeautifulSoup is bitching around
             pass
         except Exception as e:
@@ -193,6 +196,7 @@ class ContentFile(OpfFile):
         self.spine.append(self.__create_spine_entry(file.unique_id))
 
     def __create_manifest_entry(self, file: EpubEntry, **kwargs) -> BeautifulSoup:
+        # noinspection SpellCheckingInspection
         attrs = {
             'id': file.unique_id,
             'href': file.filepath.replace("OEBPS/", ""),
@@ -242,10 +246,11 @@ class ChapterFile(XHtmlFile):
         self.chapter = chapter
         book_n = chapter.book.index
         chapter_n = chapter.index
-        self.sanitized_title = sanitize_for_html(chapter.extract_clean_title())
-        self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.extract_clean_title())}.xhtml"
+        self.sanitized_title = sanitize_for_html(chapter.title)
+        # noinspection SpellCheckingInspection
+        self.filepath = f"OEBPS/{book_n}_{chapter_n}_{slugify(chapter.title)}.xhtml"
         self.unique_id = f"chap_{book_n}_{chapter_n}"
-        title = sanitize_for_html(chapter.extract_clean_title())
+        title = sanitize_for_html(chapter.title)
         # noinspection SpellCheckingInspection
         self.content = BeautifulSoup(f"""<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -258,16 +263,18 @@ class ChapterFile(XHtmlFile):
         <div class="titlepage">
             <h2 class="title"><a id="{self.unique_id}">{title}</a></h2>
         </div>
-        {str(chapter.content)}
     </div>
 </body>
 </html>""", 'html.parser')
+        # noinspection SpellCheckingInspection
+        self.content.select_one('div.titlepage').insert_after(chapter.content)
 
 
 class BookFile(XHtmlFile):
     def __init__(self, book: Book):
         super().__init__()
         self.book = book
+        # noinspection SpellCheckingInspection
         self.filepath = f"OEBPS/{book.index}_{slugify(book.title)}.{self.ext}"
         self.unique_id = f"book_{book.index}"
         title = sanitize_for_html(book.title)
@@ -289,7 +296,9 @@ class BookFile(XHtmlFile):
 
 
 class TOC(NcxFile):
+    # noinspection SpellCheckingInspection
     filepath = 'OEBPS/toc.ncx'
+    # noinspection SpellCheckingInspection
     unique_id = 'ncxtoc'
     opf_id: str = ''
     title: str = ''
@@ -313,11 +322,13 @@ class TOC(NcxFile):
     def add_book(self, book_id: str, title: str, filepath: str):
         self.structure[book_id] = []
         self.id2title[book_id] = sanitize_for_html(title)
+        # noinspection SpellCheckingInspection
         self.id2filepath[book_id] = filepath.replace("OEBPS/", "")
 
     def add_chapter(self, book: BookFile, chapter: ChapterFile):
         self.structure[book.unique_id].append(chapter.unique_id)
         self.id2title[chapter.unique_id] = chapter.sanitized_title
+        # noinspection SpellCheckingInspection
         self.id2filepath[chapter.unique_id] = chapter.filepath.replace("OEBPS/", "")
 
     def compile(self):
@@ -374,6 +385,7 @@ class ImageFile(EpubEntry):
         if ext not in ['png', 'jpeg', 'jpg', 'gif', 'svg+xml']:  # TODO: Write tests for these.
             self.log.error(f"Image type {image.format} is not supported.")
             return
+        # noinspection SpellCheckingInspection
         self.filepath = f"OEBPS/{filename}.{ext}"
         self.mimetype = f"image/{ext}"
         self.unique_id = unique_id
@@ -384,6 +396,7 @@ class ImageFile(EpubEntry):
         os.remove(tmp_img_filename)
 
 
+# noinspection SpellCheckingInspection
 class CoverFile(XHtmlFile):
     filepath = 'OEBPS/cover.xhtml'
 
