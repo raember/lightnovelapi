@@ -29,6 +29,7 @@ class Pipeline(ABC):
 
 
 class Parser(Pipeline):
+
     def __init__(self, session: Session):
         super().__init__()
         self._adapter = session.get_adapter('https://')
@@ -43,14 +44,12 @@ class Parser(Pipeline):
                 return
             else:
                 if chapter.is_complete():
-                    self.log.info(f"Got chapter {chapter} ({chapter.url})")
+                    self.log.info(f"Parsed chapter {chapter} ({chapter.url})")
                     yield book, chapter
                 else:
-                    self.log.warning("Chapter not complete.")
+                    self.log.warning(f"Chapter not complete: {chapter} ({chapter.url})")
                     if isinstance(self._adapter, FileCacheAdapter):
                         self._adapter.delete_last()
-                    if chapter.stop_if_not_complete:
-                        return
 
 
 class HtmlCleaner(Pipeline):
@@ -92,8 +91,8 @@ class ChapterConflation(Pipeline):
     @staticmethod
     def can_be_conflated(first: Chapter, second: Chapter) -> bool:
         pattern = re.compile(r'[\w\d]+')
-        owns = pattern.findall(first.extract_clean_title())
-        others = pattern.findall(second.extract_clean_title())
+        owns = pattern.findall(first.title)
+        others = pattern.findall(second.title)
         for own, other in zip(owns, others):
             if own != other:
                 return False
@@ -118,7 +117,7 @@ class Output(Pipeline, ABC):
         self.out_path = out_path
         self.slug_title = slugify(novel.title)
         self.filename = f"{self.slug_title}.{self.ext}"
-        self.path = os.path.join(out_path, self.novel.url.hostname)
+        self.path = os.path.join(out_path, self.novel.hoster_name)
         make_sure_dir_exists(self.path)
 
     def join_to_path(self, *paths: str) -> str:
@@ -147,13 +146,13 @@ class EpubMaker(Output):  # TODO: Add an Epub maker that splits by book
                 unique_id=unique_id,
                 title=self.novel.title,
                 language=self.novel.language if self.novel.language else '',
-                identifier=str(self.novel.url),
+                identifier=self.novel.url.url,
                 rights=self.novel.copyright if self.novel.copyright else '',
                 publisher=self.novel.url.hostname,
                 subject=' / '.join(['Web Novel', *(self.novel.tags if self.novel.tags else [])]),
                 date=self.novel.release_date,
-                description=self.novel.description.text,
-                creator=self.novel.author if self.novel.author else self.novel.translators if self.novel.translators else '',
+                description=self.novel.description.text.strip(),
+                creator=self.novel.author if self.novel.author else ', '.join(self.novel.translators),
                 cover_image=self.novel.cover,
                 mode='w') as epub:
             self.log.debug(f"Opened file '{filepath}'")
@@ -238,7 +237,7 @@ class StatisticsMaker(Pipeline):
                 else:
                     content_size = 0
                 stat.content_size += content_size
-                stat.document_size += getsizeof(str(chapter.document))
+                stat.document_size += getsizeof(str(chapter.document.content))
             self._novels[book.novel] = stat
             urls.add(chapter.url.url)
             yield book, chapter
@@ -247,14 +246,14 @@ class StatisticsMaker(Pipeline):
         self.log.info("Statistics:")
         self.log.info(f"  new/followed/total")
         for novel, stats in self._novels.items():
-            title = f"'{novel.title}' {novel.hoster_abbreviation},"
+            title = f"'{novel.title}' {novel.hoster_short_name},"
             rest, seconds = divmod(stats.duration.total_seconds(), 60)
             _, minutes = divmod(rest, 60)
-            total = stats.new
+            total = stats.new + stats.followed - 1  # We always "follow" one chapter
             for book in novel.books:
                 total += len(book.chapter_entries)
             stats.total = total
-            self.log.info(f"{stats.new:>5d}/{stats.followed:^5d}/{total:<5d} new chapters "
+            self.log.info(f"{stats.new:>5d}/{stats.followed:>5d}/{stats.total:>5d} chapters "
                           f"in {title:<50s} "
                           f"taking {int(minutes):02}:{int(seconds):02} "
                           f"(from {stats.started.strftime('%Y-%m-%d %H:%M:%S')} "
