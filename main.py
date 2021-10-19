@@ -15,6 +15,14 @@ from lightnovel.webnovel_com import WebNovelComApi
 from lightnovel.wuxiaworld_com import WuxiaWorldComApi
 
 
+# https://www.wuxiaworld.com/novel/second-life-ranker
+# https://www.wuxiaworld.com/novel/refining-the-mountains-and-rivers
+# https://www.wuxiaworld.com/novel/otherworldly-merchant
+# https://www.wuxiaworld.com/novel/phoenixs-requiem
+# https://www.wuxiaworld.com/novel/duke-pendragon
+# followed chapters index messed up
+
+
 def get_os(arg: str) -> OS:
     if arg == 'win':
         return Windows()
@@ -159,10 +167,10 @@ if __name__ == '__main__':
     wn_api = WebNovelComApi(browser)
     qu_api = QidianUndergroundOrgApi(browser)
     wn_api.qidian_underground_api = qu_api
-    apis = [ww_api, wn_api]
+    apis = [ww_api, wn_api, qu_api]
     if args.urls:
         log.info(f"Processing {len(args.urls)} novel{'s' if len(args.urls) >= 0 else ''}")
-        urls = list(map(parse_url, args.urls))
+        urls = args.urls
     # noinspection PyTypeChecker
     elif args.search is not None:
         if args.search == '?':
@@ -180,28 +188,18 @@ if __name__ == '__main__':
                 log.debug(f"Discarding {entry}, because it's a preview novel.")
         log.info(f"Found {len(entries)} novels")
     elif args.qu:
-        log.info("Scraping entire Webnovel/QidianUnderground")
-        entries = []
-        missed_novels = []
+        log.info("Scraping entire QidianUnderground")
         for entry in qu_api.search():
-            matches = wn_api.search_for_specific_title(entry.title)
-            if len(matches) == 0:
-                log.error(f"Could not find any matching title on webnovel for {entry}.")
-                missed_novels.append(entry)
-            else:
-                first_match = matches[0]
-                if len(matches) > 1:
-                    log.info(f"Chose {first_match} out of: {', '.join(map(str, matches))}")
-                urls.append(first_match.url)
-        log.info(f"Found {len(urls)}/{len(urls) + len(missed_novels)} novels ({len(missed_novels)} missed)")
+            urls.append(entry.url)
+        log.info(f"Found {len(urls)} novels")
     elif args.use_cached:
         if not isinstance(adapter, FileCacheAdapter):
             log.error("Cannot use cached urls without a cache.")
             exit(1)
         log.info("Only processing already cached novels:")
         for api in apis:
-            cached = adapter.list_cached(api.novel_url)
-            log.info(f"  {api.hoster}: {len(cached)} cached novels")
+            cached = adapter.list_cached(parse_url(api.novel_url))
+            log.info(f"  {api.hoster_name}: {len(cached)} cached novels")
             urls += cached
     else:
         log.info("Nothing to do")
@@ -211,12 +209,19 @@ if __name__ == '__main__':
     input("Hit [Enter] to start: ")
     stats_maker = StatisticsMaker(browser)
     try:
-        for url in urls:
+        for url in urls[:]:
+            # 264 - https://www.webnovel.com/book/legend-of-legends_11564749505437305
+            # Json decoding problem because of odd number of backslashes
+            # 700 - https://www.webnovel.com/book/world's-best-martial-artist_14495258805541605
+            # json decoding problem because of multiple backslashes
+            # 707 - https://www.webnovel.com/book/xianxia-my-junior-sisters-are-freaks!_19971574606292805
+            # json decoding problem because of double quote
+            # adapter.delete(url, {'Accept': 'text/html'})
             api = LightNovelApi.get_api(url, apis)
             novel = api.get_novel(url)
             if novel is None:
                 continue
-            log.info(f"Processing {novel}")
+            log.info(f'Processing "{novel.title}" ({novel.url})')
             fetching_strategy = api.fetch_updated if args.update else api.fetch_all
             gen = fetching_strategy.generate_chapters(novel)
 
