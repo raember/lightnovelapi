@@ -50,11 +50,17 @@ def normalize_string(string: str) -> str:
     :return: The normalized string.
     """
     subs = {
-        u'\xa0': ' ',
+        u'\xa0': ' ',  # no-break space (NBSP)
         '？': '?',
         '：': ':',
-        '’´`': "'",
+        '’': "'",
+        '´': "'",
+        '`': "'",
+        '“': '"',
+        '”': '"',
         '—': '-',
+        u'\xad': '-',  # soft hyphen (SHY)
+        '…': '...',
     }
     for char, sub in subs.items():
         string = string.replace(char, sub)
