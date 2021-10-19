@@ -14,15 +14,16 @@ from spoofbot.adapter import FileCacheAdapter
 from spoofbot.util import encode_form_data
 from urllib3.util.url import parse_url, Url
 
-from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, NovelEntry, ChapterFetchStrategy
+from lightnovel import ChapterEntry, Book, Novel, Chapter, LightNovelApi, NovelEntry, ChapterFetchStrategy, \
+    JsonDocument, HtmlDocument
 from lightnovel.qidianunderground_org import QidianUndergroundOrgNovel, QidianUndergroundOrgChapter
 from lightnovel.util import dict_to_query
 
 
 class WebNovelCom:
-    _hoster_homepage: Url = parse_url('https://www.webnovel.com')
-    _hoster: str = 'WebNovel'
-    _hoster_abbreviation: str = 'WN'
+    _hoster_base_url: Url = parse_url('https://www.webnovel.com')
+    _hoster_name: str = 'WebNovel'
+    _hoster_short_name: str = 'WN'
 
 
 class WebNovelComChapterEntry(WebNovelCom, ChapterEntry):
@@ -77,6 +78,9 @@ class WebNovelComChapterEntry(WebNovelCom, ChapterEntry):
     def mime_type(self) -> str:
         return 'application/json'
 
+    def _create_chapter_entry_from_url(self, url: Url) -> 'WebNovelComChapterEntry':
+        return WebNovelComChapterEntry(url)
+
 
 class WebNovelComBook(WebNovelCom, Book):
     _chapter_entries: List[WebNovelComChapterEntry] = []
@@ -89,7 +93,7 @@ class WebNovelComNovelEntry(WebNovelCom, NovelEntry):
     def __init__(self, json_data: dict):
         self.id = int(json_data['id'])
         super().__init__(
-            url=Url('https', host='www.webnovel.com', path=f"/book/{self.id}"),
+            url=self.change_url(path=f"/book/{self.id}"),
             title=html.unescape(json_data['name']),
         )
 
@@ -100,7 +104,7 @@ class WebNovelComNovel(WebNovelCom, Novel):
     _novel_id: str
     _timestamp: datetime
 
-    def __init__(self, url: Url, document: BeautifulSoup, session: Session):
+    def __init__(self, url: Url, document: HtmlDocument, session: Session):
         super().__init__(url, document)
         self._session = session
         self._novel_id = ''
@@ -119,39 +123,45 @@ class WebNovelComNovel(WebNovelCom, Novel):
         self._timestamp = value
 
     def _parse(self) -> bool:
-        head = self._document.select_one('head')
+        head = self.document.content.select_one('head')
         if not isinstance(head, Tag):
             raise Exception("Unexpected type of tag selection")
         url = head.select_one('meta[property="og:url"]')
         if not isinstance(url, Tag):
             raise Exception("Unexpected type of tag selection")
-        self._novel_id = parse_url(url.get('content')).query.split('=')[1]
+        if url.get(
+                'content') == 'https://www.webnovel.com/':  # If the novel has been taken down, we will get a redirect to the landing page
+            return False
+        self._novel_id = parse_url(url.get('content')).path.split('_')[-1]
         description = head.select_one('meta[property="og:description"]')
         if not isinstance(description, Tag):
             raise Exception("Unexpected type of tag selection")
-        self._description = self._document.new_tag('p')
+        self._description = self.document.content.new_tag('p')
         self._description.string = html.unescape(description.get('content'))
-        rights = self._document.select_one('p.g_ft_copy')
+        rights = self.document.content.select_one('p.g_ft_copy')
         if not isinstance(rights, Tag):
             raise Exception("Unexpected type of tag selection")
         self._rights = html.unescape(rights.text)
-        g_data = self._document.select_one('body.footer_auto > script')
+        g_data = self.document.content.select_one('body.footer_auto > script')
         if not isinstance(g_data, Tag):
             raise Exception("Unexpected type of tag selection")
         match = re.search(r"g_data\.book ?= (?P<json>{.*});?$", g_data.text, re.MULTILINE)
         if not match:
             raise Exception("Failed to match for json data")
         json_str = match.group('json')
-        json_str = re.sub(r"\\([^nr\"])", r"\1", json_str)
-        json_data = json.loads(json_str)['bookInfo']
+        # https://stackoverflow.com/questions/37689400/dealing-with-mis-escaped-characters-in-json
+        json_str2 = re.sub(r'(?<!\\)\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', '', json_str)
+        json_str3 = re.sub(r'(?<!\\)((\\\\)+)\\(?!\\)', r'\1', json_str2)  # Handle odd numbers of backslashes
+        json_data = json.loads(json_str3)['bookInfo']
         self._language = 'en'
         self._author = json_data['authorName']
+        self._translators = []
         for translator in json_data.get('translatorItems', []):
             self._translators.append(translator['name'])
         cover_update_time = datetime.fromtimestamp(float(json_data['coverUpdateTime']) / 1000)
         self._cover_url = parse_url(f'https://img.webnovel.com/bookcover/{self._novel_id}/300/300.jpg'
                                     f'?coverUpdateTime={int(cover_update_time.timestamp() * 1000)}')
-        self._tags = list(map(lambda i: i['tagName'], json_data['tagInfo']['popularItems']))
+        self._tags = list(map(lambda i: i['tagName'], json_data.get('tagInfos', [])))
         self._release_date = datetime.fromtimestamp(0)
 
         adapter = self._session.get_adapter('https://')
@@ -161,10 +171,11 @@ class WebNovelComNovel(WebNovelCom, Novel):
             )
             adapter.backup_and_miss_next_request = True
         # noinspection SpellCheckingInspection
-        chapter_list_url = Url('https', host='www.webnovel.com', path='/apiajax/chapter/GetChapterList')
+        chapter_list_url = Url('https', host='www.webnovel.com', path='/go/pcm/chapter/get-chapter-list')
         response = self._session.get(chapter_list_url.url, params={
             '_csrfToken': self._session.cookies.get('_csrfToken'),
             'bookId': self._novel_id,
+            'pageIndex': 0,
             '_': int(self._timestamp.timestamp() * 1000),
         })
         json_data = response.json()['data']
@@ -183,9 +194,9 @@ class WebNovelComNovel(WebNovelCom, Novel):
         book_index = 0
         for volume in volume_items:
             book_index += 1
-            if volume['name'] == '':
-                del volume['name']
-            book = WebNovelComBook(volume.get('name', f'Volume {book_index}'))
+            if volume['volumeName'] == '':
+                del volume['volumeName']
+            book = WebNovelComBook(volume.get('volumeName', f'Volume {book_index}'))
             book.novel = self
             book.index = book_index
             book._chapter_entries = self.__extract_chapters(volume.get('chapterItems', []))
@@ -199,11 +210,11 @@ class WebNovelComNovel(WebNovelCom, Novel):
         for chapter_item in chapter_items:
             chapter_index += 1
             chapter = WebNovelComChapterEntry(
-                title=chapter_item['name'].encode('latin1').decode('utf8'),  # turns 'â\x80\x99' into '´'
+                title=chapter_item['chapterName'],  # .encode('latin1').decode('utf8'),  # turns 'â\x80\x99' into '´'
                 is_vip=int(chapter_item['isVip']),
                 csrf_token=self._session.cookies.get('_csrfToken'),
                 book_id=self._novel_id,
-                chapter_id=chapter_item['id'],
+                chapter_id=chapter_item['chapterId'],
                 timestamp=self._timestamp,
             )
             chapter.index = chapter_index
@@ -220,7 +231,7 @@ class WebNovelComChapter(WebNovelCom, Chapter):
     _is_vip: int
     _timestamp: datetime
 
-    def __init__(self, url: Url, json_data: dict, csrf_token: str):
+    def __init__(self, url: Url, json_data: JsonDocument, csrf_token: str):
         # noinspection PyTypeChecker
         super().__init__(url, json_data)
         self._csrf_token = csrf_token
@@ -246,10 +257,10 @@ class WebNovelComChapter(WebNovelCom, Chapter):
         self._timestamp = value
 
     def _parse(self) -> bool:
-        if self._document['code'] != 0:
-            self.log.error(f"Api returned error {self._document['code']}: {self._document['msg']}")
+        if self.document.content['code'] != 0:
+            self.log.error(f"Api returned error {self.document.content['code']}: {self.document.content['msg']}")
             return False
-        data = self._document['data']
+        data = self.document.content['data']
         book_info = data['bookInfo']
         chapter_info = data['chapterInfo']
         self._chapter_id = int(chapter_info['chapterId'])
@@ -278,6 +289,11 @@ class WebNovelComChapter(WebNovelCom, Chapter):
                     child.string = text
                 self._content.append(child)
         return True
+
+    def _create_chapter_entry_from_url(self, url: Url) -> 'WebNovelComChapterEntry':
+        entry = WebNovelComChapterEntry('', 0, '', '05', '0')
+        entry._url = url
+        return entry
 
     def is_complete(self) -> bool:
         return not self.is_vip and self._next_chapter is not None
@@ -323,8 +339,6 @@ class WebNovelComFetchStrategy(ChapterFetchStrategy, ABC):
         qu_novel: QidianUndergroundOrgNovel = None
         # noinspection PyTypeChecker
         chapter_entry: WebNovelComChapterEntry = None
-        # noinspection PyTypeChecker
-        old_chapter_entry: WebNovelComChapterEntry = None
         for book, chapter_entry in novel.generate_chapter_entries():
             if chapter_entry.is_vip and not qu_switch:
                 qu_switch = True
@@ -356,6 +370,7 @@ class WebNovelComFetchStrategy(ChapterFetchStrategy, ABC):
                     chapter: QidianUndergroundOrgChapter = self._qidian_underground_api.get_chapter(
                         chapter_entry.abs_index)
                     chapter.abs_index = chapter_entry.abs_index
+                    chapter.index = chapter_entry.index
                     yield book, chapter
         if chapter_entry is None:
             self.log.warning("No chapters were generated from the chapter index.")
@@ -380,9 +395,9 @@ class UpdatedPlusQUChapterFetchStrategy(WebNovelComFetchStrategy):
     def _should_download_chapter(self, chapter_entry: WebNovelComChapterEntry) -> bool:
         cached = self._chapter_already_downloaded(chapter_entry)
         if cached:
-            self.log.info(f"Chapter {chapter_entry} already downloaded.")
+            self.log.debug(f"Chapter {chapter_entry} already downloaded.")
         else:
-            self.log.info(f"Chapter {chapter_entry} is new.")
+            self.log.debug(f"Chapter {chapter_entry} is new.")
         return not cached
 
     def _chapter_already_downloaded(self, chapter_entry: ChapterEntry) -> bool:
@@ -400,8 +415,7 @@ class WebNovelComApi(WebNovelCom, LightNovelApi):
         """
         The url to the novels. Used for listing cached novels.
         """
-        url = self._hoster_homepage
-        return Url(url.scheme, host=url.hostname, path='/book').url
+        return self.change_url(path='/book').url
 
     @property
     def qidian_underground_api(self) -> QidianUndergroundOrgApi:
