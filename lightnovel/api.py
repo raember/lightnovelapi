@@ -1,9 +1,10 @@
+import json
 import logging
 import re
 from abc import ABC
 from datetime import datetime
 from io import BytesIO
-from typing import List, Any, Tuple, Generator, Optional, Set, Dict
+from typing import List, Any, Tuple, Generator, Optional, Set
 
 from PIL import Image
 from bs4 import BeautifulSoup
@@ -15,197 +16,344 @@ from spoofbot.adapter import FileCacheAdapter, HarAdapter
 from spoofbot.util import are_schemelessly_same_site
 from urllib3.util import Url
 
-UNKNOWN = '<unknown>'
+from lightnovel.util.text import normalize_string
 
 
-class LoopingListError(Exception):
+class LoopingListException(Exception):
+    """
+    Exception for when a chapter in a novel has already been processed before.
+
+    If a chapter has been processed before but was about to be processed yet again, this means that the list of chapters
+    contains at least one duplicate.
+    """
 
     def __init__(self, chapter_entry: 'ChapterEntry'):
+        """
+        Raise exception if the chapter entry to process has been processed before already.
+
+        :param chapter_entry: The chapter entry that was identified as a duplicate.
+        """
         super().__init__(f"The chapter has already been processed before: '{chapter_entry}'")
 
 
-class ParseError(Exception):
+class ParseException(Exception):
+    """
+    Exception for a failed parsing stage of a chapter.
+
+    If the structure of a chapter's underlying data differs from what the parsing method was built for, it cannot
+    proceed to parse the chapter.
+    """
+
     chapter: 'Chapter'
 
     def __init__(self, chapter: 'Chapter'):
+        """
+        Raise exception if the chapter's underlying data could not be parsed.
+
+        :param chapter: The chapter with the faulty data.
+        """
         super().__init__(f"Failed to parse chapter {chapter}.")
         self.chapter = chapter
 
 
-class Hosted:
-    _hoster_homepage: Url = None
-    _hoster: str = UNKNOWN
-    _hoster_abbreviation: str = UNKNOWN
+class Hosted(ABC):
+    """
+    An entity that is associated with a hoster.
+    """
+
+    _hoster_base_url: Url = None
+    _hoster_name: str = None
+    _hoster_short_name: str = None
 
     @property
-    def hoster_homepage(self) -> Optional[Url]:
+    def hoster_base_url(self) -> Url:
         """
-        The url to the hoster's home page
+        The URL to the hoster's home page
 
         Inheriting classes should set this value internally.
         """
-        return self._hoster_homepage
+        if self._hoster_base_url is None:
+            raise NotImplementedError("Hoster base URL must be set by inheriting class")
+        return self._hoster_base_url
 
     @property
-    def hoster(self) -> str:
+    def hoster_name(self) -> str:
         """
         The name of the hoster.
 
         Inheriting classes should set this value internally.
         """
-        return self._hoster
+        if self._hoster_name is None:
+            raise NotImplementedError("Hoster name must be set by inheriting class")
+        return self._hoster_name
 
     @property
-    def hoster_abbreviation(self) -> str:
+    def hoster_short_name(self) -> str:
         """
-        A short representation of the hosters name
+        A short representation of the hoster's name
 
         Inheriting classes should set this value internally.
         """
-        return self._hoster_abbreviation
+        if self._hoster_short_name is None:
+            raise NotImplementedError("Hoster short name must be set by inheriting class")
+        return self._hoster_short_name
+
+    def change_url(self, url: Url = None, **kwargs) -> Url:
+        """
+        Return a URL which uses this object's identifying URL as basis and changes it if needed.
+
+        :param kwargs: Changes to path, query or fragment. If not specified, the old properties are reused.
+        :param url: The url to use as base. Equals hoster base url if None.
+        :returns: A new  with a possibly altered path
+        """
+        url = self.hoster_base_url if url is None else url
+        kwargs.setdefault('path', url.path)
+        kwargs.setdefault('query', url.query)
+        kwargs.setdefault('fragment', url.fragment)
+        return Url(url.scheme, url.auth, url.hostname, url.port, kwargs['path'], kwargs['query'], kwargs['fragment'])
 
     def __str__(self):
-        return self.hoster
+        return self.hoster_name
+
+    def __repr__(self):
+        return f"{self.hoster_name}({self.hoster_base_url})"
 
 
-class Logged:
+class Logged(ABC):
+    """Entity that has the ability to write logs itself."""
+
     log: logging.Logger = None
 
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
 
 
-class LightNovelEntity(Hosted, Logged):
-    """An entity that is identified by a url"""
+class LightNovelEntity(Hosted, Logged, ABC):
+    """Entity that is identified by a URL."""
+
     _url: Url = None
 
     def __init__(self, url: Url):
         """
-        Instantiates any entity of a light novel hoster that can be identified with a url
+        Instantiate any entity of a light novel hoster that can be identified with a URL.
 
         Inheriting classes should set a valid value for the _hoster and _hoster_abbreviation variables.
 
-        :param url: the identifying url
+        :param url: The identifying URL
         """
         super().__init__()
         self._url = url
 
     @property
     def url(self) -> Url:
-        """The url that identifies this entity"""
+        """The URL that identifies this entity"""
         return self._url
 
     def change_url(self, **kwargs) -> Url:
-        """
-        Returns a url which uses this object's identifying url as basis and changes it if needed.
+        return super(LightNovelEntity, self).change_url(url=self.url, **kwargs)
 
-        :param kwargs: Changes to path, query or fragment. If not specified, the old properties are reused.
-        :returns: A new url with a possibly altered path
-        """
-        url = self.url
-        kwargs.setdefault('path', url.path)
-        kwargs.setdefault('query', url.query)
-        kwargs.setdefault('fragment', url.fragment)
-        return Url(url.scheme, url.auth, url.hostname, url.port, kwargs['path'], kwargs['query'], kwargs['fragment'])
+    def __repr__(self):
+        return f"{self.hoster_name}({self.url})"
 
 
-class Titled:
-    _title: str = UNKNOWN
+class Titled(ABC):
+    """Entity that has a title."""
+
+    _title: str = None
+    _is_chapter: bool = True
 
     @property
     def title(self) -> str:
         """The title"""
-        return self._title
-
-    @property
-    def quoted_title(self):
-        if self._title == UNKNOWN:
-            return self._title
-        return f"'{self._title}'"
+        if not self._title:
+            return ''
+        title1 = normalize_string(self._title)
+        # Sometimes the title starts with "chapter (42): "
+        if self._is_chapter:
+            title2 = re.sub(r'^((chapter|vol(ume)?|book)?\s*[(\[]?\s*\d+\s*[)\]\-:;.,]*\s+)+', '', title1,
+                            flags=re.IGNORECASE).strip('– ')
+            if len(title2) == 0:
+                return title1
+        else:
+            title2 = title1
+        # Sometimes the title contains the index or a part "B"
+        title3 = re.sub(r'[(\[]?(\d+[A-Z]?)[)\]]?\s+\.?$', '', title2, flags=re.IGNORECASE).strip('– ')
+        if len(title3) == 0:
+            return title2
+        return title3
 
     def __str__(self):
-        return self.quoted_title
+        return self.title
+
+    def __repr__(self):
+        return self.title
 
 
-class Page(LightNovelEntity, Titled):
+class Document(ABC):
+    """Document that is the result of an HTTP request"""
+    _content: Any = None
+
+    def __init__(self, content: Any):
+        """
+        Create a Document with a specific content.
+
+        :param content: The content that the Document represents.
+        """
+        self._content = content
+
+    @property
+    def content(self) -> Any:
+        return self._content
+
+    @classmethod
+    def from_string(cls, string: str, **kwargs) -> 'Document':
+        """
+        Create a document on the basis of a string as the underlying data.
+
+        :param string: The string to base the document on.
+        :param kwargs: Possible additional arguments.
+        :return: An instance of a Document.
+        """
+        raise NotImplementedError("Must be overwritten")
+
+    def __del__(self):
+        """Make sure to delete the content from memory if the document gets deleted."""
+        del self._content
+
+    def __str__(self):
+        return self._content
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+
+class HtmlDocument(Document):
+    """HTML document that is the result of an HTTP request"""
+    _content: BeautifulSoup = None
+
+    def __init__(self, content: BeautifulSoup):
+        """
+        Create an HtmlDocument with a specific content.
+
+        :param content: The content that the HtmlDocument represents.
+        """
+        super(HtmlDocument, self).__init__(content)
+
+    @property
+    def content(self) -> BeautifulSoup:
+        return self._content
+
+    @classmethod
+    def from_string(cls, string: str, features: str = "html5lib") -> 'HtmlDocument':
+        """
+        Create an HTML document on the basis of a string as the underlying data.
+
+        :param string: The HTML string to base the document on.
+        :param features: Argument to pass to the BeautifulSoup parser.
+        :return: An instance of an HtmlDocument.
+        """
+        return HtmlDocument(BeautifulSoup(string, features=features))
+
+
+class JsonDocument(Document):
+    """JSON document that is the result of an HTTP request"""
+    _content: dict = None
+
+    def __init__(self, content: dict):
+        """
+        Create an JsonDocument with a specific content.
+
+        :param content: The content that the JsonDocument represents.
+        """
+        super(JsonDocument, self).__init__(content)
+
+    @property
+    def content(self) -> dict:
+        return self._content
+
+    @classmethod
+    def from_string(cls, string: str) -> 'JsonDocument':
+        """
+        Create an JSON document on the basis of a string as the underlying data.
+
+        :param string: The JSON string to base the document on.
+        :return: An instance of an HtmlDocument.
+        """
+        return JsonDocument(json.loads(string))
+
+
+class Page(LightNovelEntity, Titled, ABC):
     """An html document of a light novel page"""
-    _document: BeautifulSoup
+
+    _document: Document
     _success: bool
 
-    def __init__(self, url: Url, document: BeautifulSoup):
+    def __init__(self, url: Url, document: Document):
+        """
+        Create a page based on its URL and its content.
+
+        :param url: The URL the page stems from.
+        :param document: The document that is represented by the page.
+        """
         super().__init__(url)
         self._document = document
         self._success = False
 
     @property
-    def document(self) -> BeautifulSoup:
+    def document(self) -> Document:
         """The document that was loaded from the page"""
         return self._document
 
     @document.setter
-    def document(self, value: BeautifulSoup):
+    def document(self, value: Document):
+        """The document that was loaded from the page"""
         self._document = value
 
     @document.deleter
     def document(self):
+        """The document that was loaded from the page"""
         del self._document
 
     @property
     def success(self) -> bool:
-        """Indicates whether the document was parsed successfully"""
+        """Indicate whether the document was parsed successfully"""
         return self._success
 
-    def _ensure_vars_changed(self, variables: Dict[str, object]):
-        for var, default in variables.items():
-            if getattr(self, var, default) == default:
-                self.log.warning(f"Variable {var} ({str(default)}) unchanged after parsing.")
-
     def parse(self) -> bool:
-        """Parses the page's document
+        """Parse the page's document.
 
         :returns: True if the parsing was successful. False otherwise.
         """
         self._success = self._parse()
-        self._ensure_vars_changed({
-            '_document': None,
-            '_title': UNKNOWN,
-        })
         return self.success
 
     def _parse(self) -> bool:
         """Internal method that parses the page's document
 
-        Inheriting classes should override this method.
+        Inheriting classes must override this method.
         :returns: True if the parsing was successful. False otherwise.
         """
         raise NotImplementedError('Must be overwritten')
 
     def __str__(self):
-        return f"{self.quoted_title} {super().__str__()}".strip()
+        return f'{self.title} {super().__str__()}'.strip()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}("{self.title}", "{self.url}")'
 
 
 class Novel(Page, ABC):
     _description: Tag = None
-    _author: str = UNKNOWN
+    _author: str = None
     _translators: List[str] = []
     _editors: List[str] = []
-    _language: str = UNKNOWN
-    _rights: str = UNKNOWN
+    _language: str = None
+    _rights: str = None
     _tags: List[str] = []
     _books: List['Book'] = []
     _cover_url: Url = None
     _cover: Image.Image = None
     _release_date: datetime = None
-
-    def __init__(self, url: Url, document: BeautifulSoup):
-        super().__init__(url, document)
-        self._author = UNKNOWN
-        self._translators = []
-        self._editors = []
-        self._language = UNKNOWN
-        self._rights = UNKNOWN
-        self._tags = []
-        self._books = []
 
     @property
     def description(self) -> Optional[Tag]:
@@ -266,77 +414,34 @@ class Novel(Page, ABC):
         """The date of the release of the novel"""
         return self._release_date
 
-    def parse(self) -> bool:
-        """Parses this novel's document
-
-        :returns: True if the parsing was successful. False otherwise.
-        """
-        result = super().parse()
-        self._ensure_vars_changed({
-            '_description': None,
-            '_author': UNKNOWN,
-            '_language': UNKNOWN,
-            '_rights': None,
-            '_books': [],
-            '_cover_url': None,
-            '_release_date': None,
-        })
-        return result
-
     def generate_chapter_entries(self) -> Generator[Tuple['Book', 'ChapterEntry'], None, None]:
-        """Generates all the parsed books and their chapter entries and assigns them their index.
+        """
+        Generate all the parsed books and their chapter entries and assigns them their index.
 
         :returns: A generator that produces Book-ChapterEntry pairs.
         """
-        book_n = 0
         chapter_n_abs = 0
-        for book in self.books:
-            book_n += 1
-            book.number = book_n
-            for chapter_entry in book.generate_chapter_entries():
+        for book_n, book in enumerate(self.books):
+            book.number = book_n + 1
+            for chapter_n, chapter_entry in enumerate(book.generate_chapter_entries()):
                 chapter_n_abs += 1
                 chapter_entry.abs_index = chapter_n_abs
+                chapter_entry.index = chapter_n + 1
                 yield book, chapter_entry
 
     def __str__(self):
         return f"{super().__str__()} by {self.author}"
 
-
-class Indexed:
-    _index: int = 0
-
-    @property
-    def index(self) -> int:
-        """The index of this entity"""
-        return self._index
-
-    @index.setter
-    def index(self, value: int):
-        self._index = value
-
-    def __str__(self):
-        return str(self._index)
+    def __repr__(self):
+        return f'{self.__class__.__name__}("{self.title}", "{self.url}")'
 
 
-class AbsoluteIndexed(Indexed):
-    _abs_index: int = 0
+class Book(Titled, ABC):
+    """A book of a novel"""
 
-    @property
-    def abs_index(self) -> int:
-        """The absolute index of this entity"""
-        return self._abs_index
-
-    @abs_index.setter
-    def abs_index(self, value: int):
-        self._abs_index = value
-
-    def __str__(self):
-        return f"({self.abs_index}) {super().__str__()}"
-
-
-class Book(Indexed, Titled):
     _chapter_entries: List['ChapterEntry'] = []
     _novel: 'Novel' = None
+    _index: int = 0
 
     def __init__(self, title: str):
         super().__init__()
@@ -357,8 +462,18 @@ class Book(Indexed, Titled):
     def novel(self, value: 'Novel'):
         self._novel = value
 
+    @property
+    def index(self) -> int:
+        """The index of this book"""
+        return self._index
+
+    @index.setter
+    def index(self, value: int):
+        self._index = value
+
     def generate_chapter_entries(self) -> Generator['ChapterEntry', None, None]:
-        """Generates all chapter entries in the book and assigns them their index
+        """
+        Generate all chapter entries in the book and assigns them their index
 
         :returns: A generator of chapter entries
         """
@@ -369,11 +484,18 @@ class Book(Indexed, Titled):
             yield chapter_entry
 
     def __str__(self):
-        return f"{self._index} {self.quoted_title} ({len(self._chapter_entries)} entries)"
+        return f'{self.index}: {self.title}'
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.index}, "{self.title}", {repr(self.novel)}, [{repr(self.chapter_entries)}])'
 
 
-class ChapterEntity(AbsoluteIndexed, LightNovelEntity):
+class ChapterEntity(LightNovelEntity, ABC):
+    """Describe objects that vaguely describe chapters"""
+
     _mime_type: MimeTypeTag = MimeTypeTag('text', 'html')
+    _index: int = 0
+    _abs_index: int = 0
 
     @property
     def mime_type(self) -> MimeTypeTag:
@@ -384,8 +506,27 @@ class ChapterEntity(AbsoluteIndexed, LightNovelEntity):
     def accept_header(self) -> dict:
         return {'Accept': self._mime_type}
 
+    @property
+    def index(self) -> int:
+        """The index of this chapter entry"""
+        return self._index
+
+    @index.setter
+    def index(self, value: int):
+        self._index = value
+
+    @property
+    def abs_index(self) -> int:
+        """The absolute index of this chapter entry"""
+        return self._abs_index
+
+    @abs_index.setter
+    def abs_index(self, value: int):
+        self._abs_index = value
+
     def _create_chapter_entry(self, url: Url, offset: int) -> Optional['ChapterEntry']:
-        """Creates a chapter entry from a path and an offset
+        """
+        Create a chapter entry from a path and an offset
 
         :param url: The url of the chapter entry to be.
         :param offset: The offset to be applied on the index (usually 1 or -1).
@@ -393,28 +534,57 @@ class ChapterEntity(AbsoluteIndexed, LightNovelEntity):
         """
         if url is None:
             return None
-        chapter_entry = ChapterEntry(url)
+        chapter_entry = self._create_chapter_entry_from_url(url)
         chapter_entry.index = self.index + offset
         chapter_entry.abs_index = self.abs_index + offset
         return chapter_entry
 
+    def _create_chapter_entry_from_url(self, url: Url) -> 'ChapterEntry':
+        """
+        Create a chapter entry from a url only.
 
-class ChapterEntry(ChapterEntity, Titled):
+        Subclasses must override and instantiate their specific subclass.
 
-    def __init__(self, url: Url, title: str = UNKNOWN):
+        :param url: The url of the chapter entry to be.
+        :return: A new instance of a ChapterEntry.
+        """
+        raise NotImplementedError("Must override method")
+
+    def __str__(self):
+        return str(self.abs_index)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.abs_index}, "{self.url}")'
+
+
+class ChapterEntry(ChapterEntity, Titled, ABC):
+    """Entry of a chapter"""
+
+    def __init__(self, url: Url, title: str = None):
         super().__init__(url)
         self._title = title
 
     @property
     def spoof_url(self) -> Url:
-        """The url to use by the cache to store the resulting chapter"""
+        """
+        The URL to use by the cache to store the resulting chapter
+
+        Can be overwritten by subclasses. Useful if the URL of a chapter has a query and or a fragment that determines
+        the specific chapter, because those get stripped for the caching process. Also useful if the path of the URL
+        uses variables (i.e. timestamps) that would prevent a future hit in cache.
+        """
         return self._url
 
     def __str__(self):
-        return f"{super().__str__()} {self.quoted_title} ({self.url})"
+        return f'{super().__str__()}: "{self.title}" ({self.url})'
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.abs_index}, "{self.url}")'
 
 
 class Chapter(Page, ChapterEntity, ABC):
+    """A chapter with the chapter's contents"""
+
     _previous_chapter: Optional[Url] = None
     _next_chapter: Optional[Url] = None
     _content: Tag = None
@@ -446,33 +616,9 @@ class Chapter(Page, ChapterEntity, ABC):
         """The book this chapter belongs to"""
         return self._book
 
-    def parse(self) -> bool:
-        """Parses this chapter's document
-
-        :returns: True if the parsing was successful. False otherwise.
-        """
-        result = super().parse()
-        self._ensure_vars_changed({
-            '_content': None,
-        })
-        return result
-
-    def extract_clean_title(self) -> str:
-        """Try to get the title as clean as possible"""
-        title = self.quoted_title.strip("' ")
-        match = re.compile(r'^chapter\s+[(\[]?\s*(\d+)\s*[)\]\-:]*\s*', re.IGNORECASE).search(title)
-        if match is not None:
-            title = self._cut_match(match, title)
-        match = re.compile(r'[(\[]?(\d+[A-Z]?)[)\]]?$').search(title)
-        if match is not None:
-            title = self._cut_match(match, title)
-        title = title.strip('–- ')
-        return title if len(title) > 3 else self._title.strip()
-
-    @staticmethod
-    def _cut_match(match, string: str) -> str:
-        """Cut the matching part or a string"""
-        return string[:match.span(0)[0]] + string[match.span(0)[1]:]
+    @book.setter
+    def book(self, value: Book):
+        self._book = value
 
     def is_complete(self) -> bool:
         """Whether the chapter has been completely published or not (partial/restricted access)"""
@@ -483,26 +629,38 @@ class Chapter(Page, ChapterEntity, ABC):
         raise NotImplementedError('Must be overwritten')
 
     def __del__(self):
-        if self._book is not None:
+        if self._book:
             del self._book
-        if self._content is not None:
+        if self._content:
             del self._content
-        if self._document is not None:
+        if self._document:
             del self._document
 
     def __str__(self):
-        if self._book is None:
-            return f"({self._abs_index}) ?.{self._index} {self.extract_clean_title()}"
-        return f"({self._abs_index}) {self._book.index}.{self._index} {self.extract_clean_title()}"
+        return f'{self._abs_index}({self._book.index if self._book else "?"}.{self._index}): "{self.title}"'
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.abs_index}, "{self.title}", "{self.url}")'
 
 
-class NovelEntry(Titled, LightNovelEntity):
+class NovelEntry(Titled, LightNovelEntity, ABC):
+    """An entry of a listed novel"""
+    _is_chapter = False
+
     def __init__(self, url: Url, title: str):
         super().__init__(url)
         self._title = title
 
+    def __str__(self):
+        return self.title
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}("{self.title}", "{self.url}")'
+
 
 class ChapterFetchStrategy:
+    """The strategy for fetching chapters"""
+
     log: logging.Logger = None
     _api: 'LightNovelApi' = None
     _adapter: BaseAdapter = None
@@ -516,7 +674,7 @@ class ChapterFetchStrategy:
 
     def generate_chapters(self, novel: Novel) -> Generator[Tuple[Book, Chapter], None, None]:
         """
-        Generates all the chapters of a novel, including those not listed on the chapter index.
+        Generate all the chapters of a novel, including those not listed on the chapter index.
 
         :param novel: The novel of which the chapters shall be generated.
         :return: A generator for book-chapter pairs
@@ -529,9 +687,9 @@ class ChapterFetchStrategy:
                 yield book, chapter
             for chapter in self._fetch_linked_chapters(chapter):
                 yield book, chapter
-        except LoopingListError as lle:
+        except LoopingListException as lle:
             self.log.warning(lle)
-        except ParseError as pe:
+        except ParseException as pe:
             self.log.error(pe)
             adapter = self._adapter
             if isinstance(adapter, FileCacheAdapter):
@@ -539,24 +697,22 @@ class ChapterFetchStrategy:
                     adapter.delete(pe.chapter.url, pe.chapter.accept_header)
 
     def _reset_blacklist(self):
-        """
-        Resets the url blacklist for already processed urls.
-        """
+        """Reset the url blacklist for already processed urls."""
         self._blacklist = set()
 
     def _check_blacklist(self, chapter_entry: ChapterEntry):
         """
-        Checks whether the given chapter entry has already been processed.
+        Check whether the given chapter entry has already been processed.
 
         :param chapter_entry: The chapter entry to check.
-        :raise LoopingListError: The chapter entry has been processed before.
+        :raise LoopingListException: The chapter entry has been processed before.
         """
         if chapter_entry.url.url in self._blacklist:
-            raise LoopingListError(chapter_entry)
+            raise LoopingListException(chapter_entry)
 
     def _add_to_blacklist(self, chapter_entry: ChapterEntry):
         """
-        Adds a chapter entry to the blacklist so it doesn't get processed again in case of circular links.
+        Add a chapter entry to the blacklist so it doesn't get processed again in case of circular links.
 
         :param chapter_entry: The chapter entry to blacklist.
         """
@@ -564,9 +720,10 @@ class ChapterFetchStrategy:
 
     def _should_download_chapter(self, chapter_entry: ChapterEntry) -> bool:
         """
-        Decides whether to download the chapter.
+        Decide whether to download the chapter.
 
         Only applies to chapters from the chapter index.
+
         :param chapter_entry: The chapter entry to check for download eligibility
         :return: True if the chapter should be downloaded. False otherwise.
         """
@@ -574,7 +731,7 @@ class ChapterFetchStrategy:
 
     def _fetch_indexed_chapters(self, novel: Novel) -> Generator[Tuple[Book, Chapter], None, None]:
         """
-        Generates all chapters from the chapter index.
+        Generate all chapters from the chapter index.
         
         If there's no chapters generated at the end, the last chapter will be generated to allow for following
         chapter links.
@@ -584,28 +741,40 @@ class ChapterFetchStrategy:
         book = None
         chapter_entry = None
         chapter = None
+
+        # Cycle through all chapters listed on the novel's index
         for book, chapter_entry in novel.generate_chapter_entries():
             self._check_blacklist(chapter_entry)
             if self._should_download_chapter(chapter_entry):
                 chapter = self._fetch_chapter(chapter_entry)
                 yield book, chapter
+                if not chapter.is_complete():
+                    # Maybe this chapter was cached and should be updated
+                    chapter = self._fetch_chapter(chapter_entry)
+                    yield book, chapter
+                if not chapter.is_complete():
+                    # Chapter is definitely not complete
+                    break
             self._add_to_blacklist(chapter_entry)
+
         if chapter_entry is None:
             self.log.warning("No chapters were generated from the chapter index.")
             return
         if chapter is None:
             self.log.info(f"Getting chapter {chapter_entry} to follow next chapters.")
+            # Remove chapter entry from blacklist in order to fetch the chapter and parse it
+            self._blacklist.remove(chapter_entry.url.url)
             chapter = self._fetch_chapter(chapter_entry)
             yield book, chapter
 
     def _fetch_linked_chapters(self, last_chapter: Chapter) -> Generator[Chapter, None, None]:
         """
-        Generates chapters based on the last indexed chapter by following their next chapter link.
+        Generate chapters based on the last indexed chapter by following their next chapter link.
 
         :param last_chapter: The last chapter that was in the chapter index.
         :return: A generator for chapters.
         """
-        if not last_chapter.parse() or last_chapter.next_chapter is None:
+        if not last_chapter.success or last_chapter.next_chapter is None:
             return
         self.log.info("Chapter index on novel page exhausted, but a link to the next chapter is present.")
         adapter = self._adapter
@@ -617,18 +786,32 @@ class ChapterFetchStrategy:
             chapter = self._fetch_next_chapter(last_chapter)
             self._add_to_blacklist(chapter_entry)
             if chapter.next_chapter is None and isinstance(adapter, FileCacheAdapter) and adapter.hit:
-                chapter = self._check_whether_remote_has_next_chapter_link(chapter)
+                # TODO: Unset active flag of cache and resend the request
+                chapter = self._check_for_next_chapter_link_in_remote(chapter)
             yield chapter
+            if not chapter.is_complete():
+                # Maybe this chapter was cached and should be updated
+                chapter = self._check_for_next_chapter_link_in_remote(chapter)
+                yield chapter
+            if not chapter.is_complete():
+                # Chapter is definitely not complete
+                break
             self._add_to_blacklist(chapter_entry)
 
     def _fetch_next_chapter(self, last_chapter: Chapter) -> Chapter:
-        next_chapter = last_chapter.next_chapter
-        self.log.debug(f"Following existing link to the next chapter {next_chapter}.")
-        return self._fetch_chapter(next_chapter)
+        next_chapter_entry = last_chapter.next_chapter
+        self.log.debug(f"Following existing link to the next chapter {next_chapter_entry}.")
+        next_chapter = self._fetch_chapter(next_chapter_entry)
+        if not next_chapter.parse():
+            raise ParseException(next_chapter)
+        next_chapter.book = last_chapter.book
+        next_chapter.abs_index = last_chapter.abs_index + 1
+        next_chapter.index = last_chapter.index + 1
+        return next_chapter
 
     def _fetch_chapter(self, chapter_entry: ChapterEntry) -> Chapter:
         """
-        Gets the next chapter from the last parsed chapter.
+        Get the next chapter from the last parsed chapter.
 
         :param chapter_entry: The chapter entry to be fetched.
         :returns: A Chapter instance to be parsed.
@@ -636,9 +819,9 @@ class ChapterFetchStrategy:
         self._check_blacklist(chapter_entry)
         return self._api.get_chapter_by_entry(chapter_entry)
 
-    def _check_whether_remote_has_next_chapter_link(self, chapter: Chapter) -> Chapter:
+    def _check_for_next_chapter_link_in_remote(self, chapter: Chapter) -> Chapter:
         """
-        Checks whether the remote chapter has an updated link to the next chapter and returns the new chapter.
+        Check whether the remote chapter has an updated link to the next chapter and returns the new chapter.
 
         :param chapter: The chapter to check for an update.
         :return: An updated version of the chapter if available.
@@ -646,9 +829,11 @@ class ChapterFetchStrategy:
         adapter = self._adapter
         if isinstance(adapter, FileCacheAdapter):
             adapter.backup_and_miss_next_request = True
+            abs_index, index, book = chapter.abs_index, chapter.index, chapter.book
             chapter = self._api.get_chapter(chapter.url)
+            chapter.abs_index, chapter.index, chapter.book = abs_index, index, book
             if not chapter.parse():
-                raise ParseError(chapter)
+                raise ParseException(chapter)
             if chapter.next_chapter is None:
                 self.log.info(f"Could not find updated link to the next chapter from the remote chapter {chapter}")
                 adapter.restore_backup()
@@ -656,15 +841,34 @@ class ChapterFetchStrategy:
             self.log.warning("Cannot check for an updated remote because I'm not using the file cache.")
         return chapter
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({repr(self._api)})'
+
 
 # noinspection DuplicatedCode
 class AllChapterFetchStrategy(ChapterFetchStrategy):
+    """The strategy for fetching all chapters of a novel"""
+
     def _should_download_chapter(self, chapter_entry: ChapterEntry) -> bool:
+        """
+        Indicate to download the chapter regardless
+
+        :param chapter_entry: The chapter entry to check.
+        :return: True if the chapter should be downloaded. False otherwise.
+        """
         return True
 
 
 class UpdatedChapterFetchStrategy(ChapterFetchStrategy):
+    """The strategy for fetching only updated chapters of a novel"""
+
     def _should_download_chapter(self, chapter_entry: ChapterEntry) -> bool:
+        """
+        Check whether the chapter has not been downloaded before.
+
+        :param chapter_entry: The chapter entry to check.
+        :return: True if the chapter should be downloaded. False otherwise.
+        """
         cached = self._chapter_already_downloaded(chapter_entry)
         if cached:
             self.log.info(f"Chapter {chapter_entry} already downloaded.")
@@ -679,10 +883,13 @@ class UpdatedChapterFetchStrategy(ChapterFetchStrategy):
 
 
 class LightNovelApi(Hosted, ABC):
+    """An abstract api for a light novel hoster"""
+
     _session: Session
 
     def __init__(self, session: Session = Session()):
-        """Creates a new API for a specific service.
+        """
+        Create a new API for a specific service.
 
         :param session: The session to use when executing HTTP requests.
         """
@@ -693,9 +900,7 @@ class LightNovelApi(Hosted, ABC):
 
     @property
     def novel_url(self) -> str:
-        """
-        The url to the novels. Used for listing cached novels.
-        """
+        """The url to the novels. Used for listing cached novels."""
         raise NotImplementedError('Must be overwritten')
 
     @property
@@ -723,7 +928,8 @@ class LightNovelApi(Hosted, ABC):
         return UpdatedChapterFetchStrategy(self)
 
     def _request_preparation(self, kwargs: dict) -> Tuple[dict, dict]:
-        """Prepares kwargs before a request is made by splitting off additional arguments
+        """
+        Prepare kwargs before a request is made by splitting off additional arguments
 
         :param kwargs: The arguments to process.
         :returns: kwargs for the requests library and for the json library.
@@ -743,8 +949,9 @@ class LightNovelApi(Hosted, ABC):
             del kwargs[spoof_url_key]
         return kwargs, json_kwargs
 
-    def _get_html_document(self, url: Url, **kwargs: Any) -> BeautifulSoup:
-        """Downloads an html document from a given url.
+    def _get_html_document(self, url: Url, **kwargs: Any) -> HtmlDocument:
+        """
+        Download an HTML document from a given url.
 
         :param url: The url where the document is located at.
         :param kwargs: Additional args to convey to the requests library.
@@ -760,10 +967,11 @@ class LightNovelApi(Hosted, ABC):
             response = self._session.navigate(url.url, **requests_kwargs)
         else:
             response = self._session.get(url.url, **requests_kwargs)
-        return BeautifulSoup(response.text, features="html5lib")
+        return HtmlDocument.from_string(response.text)
 
-    def _get_json_document(self, url: Url, **kwargs: Any) -> dict:
-        """Downloads a json document from a given url.
+    def _get_json_document(self, url: Url, **kwargs: Any) -> JsonDocument:
+        """
+        Download a JSON document from a given url.
 
         :param url: The url where the document is located at.
         :param kwargs: Additional args to convey to the requests library or to the json library (dict under 'json').
@@ -776,10 +984,11 @@ class LightNovelApi(Hosted, ABC):
         else:
             response = self._session.get(url.url, **requests_kwargs)
         response.encoding = 'utf8'
-        return response.json(**json_kwargs)
+        return JsonDocument(response.json(**json_kwargs))
 
     def get_image(self, url: Url, **kwargs: Any) -> Image.Image:
-        """Downloads an image from a url.
+        """
+        Download an image from a url.
 
         :param url: The url of the image.
         :param kwargs: Additional args to convey to the requests library.
@@ -792,7 +1001,8 @@ class LightNovelApi(Hosted, ABC):
         return Image.open(BytesIO(response.content))
 
     def _get_novel(self, url: Url, **kwargs: Any) -> Novel:
-        """Downloads the main page of the novel from the given url.
+        """
+        Download the main page of the novel from the given url.
 
         Inheriting classes may override this method to adjust the novel class.
         :param url: The url where the page is located at.
@@ -802,7 +1012,8 @@ class LightNovelApi(Hosted, ABC):
         return Novel(url, self._get_html_document(url, **kwargs))
 
     def get_novel(self, url: Url) -> Optional[Novel]:
-        """Downloads the main page of the novel from the given url and parses it.
+        """
+        Download the main page of the novel from the given url and parses it.
 
         This method downloads the latest version from the web and if it does not parse, restores from the backup.
         :param url: The url where the page is located at.
@@ -821,7 +1032,8 @@ class LightNovelApi(Hosted, ABC):
         return novel
 
     def get_chapter(self, url: Url, **kwargs: Any) -> Chapter:
-        """Downloads a chapter from the given url.
+        """
+        Download a chapter from the given url.
 
         Inheriting classes may override this method to adjust the chapter class.
         :param url: The url where the chapter is located at.
@@ -831,7 +1043,8 @@ class LightNovelApi(Hosted, ABC):
         return Chapter(url, self._get_html_document(url, **kwargs))
 
     def get_chapter_by_entry(self, chapter_entry: ChapterEntry, already_processed=None, **kwargs: Any) -> Chapter:
-        """Downloads a chapter from the given chapter entry.
+        """
+        Download a chapter from the given chapter entry.
 
         :param chapter_entry: The ChapterEntry for the chapter.
         :param already_processed: A list to append the fetched url to.
@@ -848,8 +1061,9 @@ class LightNovelApi(Hosted, ABC):
         already_processed.append(chapter_entry.url.url)
         return chapter
 
-    def search(self, **kwargs) -> List[NovelEntry]:
-        """Searches for a novel by title.
+    def search(self, *args, **kwargs) -> List[NovelEntry]:
+        """
+        Search for a novel by title.
 
         :param kwargs: The search parameters to use.
         :return: A list of SearchEntry.
@@ -863,11 +1077,12 @@ class LightNovelApi(Hosted, ABC):
         :param url: The url to test.
         :return: True if this hoster indeed serves this url.
         """
-        return are_schemelessly_same_site(url, self._hoster_homepage)
+        return are_schemelessly_same_site(url, self._hoster_base_url)
 
     @staticmethod
     def get_api(url: Url, apis: List['LightNovelApi'] = None) -> 'LightNovelApi':
-        """Probes all available api wrappers and returns the first one that matches with the url.
+        """
+        Probe all available api wrappers and returns the first one that matches with the url.
 
         :param url: The url to be checked for.
         :param apis: The apis to check for matches for. Defaults to all applicable apis.
