@@ -6,9 +6,9 @@ from spoofbot.adapter import HarAdapter
 from urllib3.util import parse_url
 
 from lightnovel.wuxiaworld_com import WuxiaWorldComNovel, WuxiaWorldComChapter, WuxiaWorldComApi
-from tests.config import Har, prepare_browser
 # noinspection SpellCheckingInspection
 from lightnovel.wuxiaworld_com.api import Genre
+from tests.config import Har, prepare_browser
 
 
 # noinspection SpellCheckingInspection,DuplicatedCode
@@ -80,7 +80,7 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
         self.assertEqual('Volume 1', book.title)
         self.assertEqual(27, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
-        self.assertEqual('Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (1)', chapter.title)
+        self.assertEqual("Big Sis, I'm afraid this is a misunderstanding!", chapter.title)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.url.path)
         book = novel.books[1]
         self.assertEqual('Volume 2', book.title)
@@ -113,7 +113,7 @@ class WuxiaWorldComApiHjcTest(unittest.TestCase):
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01',
                          chapter.url.url)
         self.assertEqual('https://www.wuxiaworld.com', chapter.change_url(path=None).url)
-        self.assertEqual("Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (1)", chapter.title)
+        self.assertEqual("Big Sis, I'm afraid this is a misunderstanding!", chapter.title)
         self.assertEqual(25687, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
         self.assertIsNone(chapter.previous_chapter)
@@ -160,7 +160,7 @@ As if the pink haired girl had heard his internal prayers, she actually slowly t
         self.assertEqual('https://www.wuxiaworld.com/novel/heavenly-jewel-change/hjc-book-1-chapter-1-02',
                          chapter.url.url)
         self.assertEqual('https://www.wuxiaworld.com', chapter.change_url(path=None).url)
-        self.assertEqual("Chapter 1 – Big Sis, I’m afraid this is a misunderstanding! (2)", chapter.title)
+        self.assertEqual("Big Sis, I'm afraid this is a misunderstanding!", chapter.title)
         self.assertEqual(25689, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
         self.assertEqual('/novel/heavenly-jewel-change/hjc-book-1-chapter-1-01', chapter.previous_chapter.url.path)
@@ -420,61 +420,61 @@ class WuxiaWorldComApiASTTest(unittest.TestCase):
                          )
         self.assertEqual(16, len(novel.books))
         book = novel.books[0]
-        self.assertEqual('Vol 1: Divine Strength Awakened, Mysteries of his birth', book.title)
+        self.assertEqual('Divine Strength Awakened, Mysteries of his birth', book.title)
         self.assertEqual(113, len(book.chapter_entries))
         chapter = book.chapter_entries[0]
-        self.assertEqual('Chapter 1 - Qing Clan, Qing Shui', chapter.title)
+        self.assertEqual('Qing Clan, Qing Shui', chapter.title)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.url.path)
         book = novel.books[1]
-        self.assertEqual('Vol 2: Legend of the Hundred Miles City, Peerless and Independent', book.title)
+        self.assertEqual('Legend of the Hundred Miles City, Peerless and Independent', book.title)
         self.assertEqual(46, len(book.chapter_entries))
         book = novel.books[2]
-        self.assertEqual('Vol 3: The Resplendent Fireworks, Mountains and Sea as a Portrait', book.title)
+        self.assertEqual('The Resplendent Fireworks, Mountains and Sea as a Portrait', book.title)
         self.assertEqual(83, len(book.chapter_entries))
         book = novel.books[3]
-        self.assertEqual('Vol 4: Tears of a Beauty destroying the kingdom, the Twelve Portraits of Beauties',
+        self.assertEqual('Tears of a Beauty destroying the kingdom, the Twelve Portraits of Beauties',
                          book.title)
         self.assertEqual(98, len(book.chapter_entries))
         book = novel.books[4]
-        self.assertEqual('Vol 5: Greencloud Continent of the Nine Continents, Stepping into the Yan Clan', book.title)
+        self.assertEqual('Greencloud Continent of the Nine Continents, Stepping into the Yan Clan', book.title)
         self.assertEqual(101, len(book.chapter_entries))
         book = novel.books[5]
-        self.assertEqual('Vol 6: Aura of a King, Sword pointing to the Dome of Heavens', book.title)
+        self.assertEqual('Aura of a King, Sword pointing to the Dome of Heavens', book.title)
         self.assertEqual(65, len(book.chapter_entries))
         book = novel.books[6]
-        self.assertEqual('Vol 7: Path of a Martial Saint, Heart of the Strong', book.title)
+        self.assertEqual('Path of a Martial Saint, Heart of the Strong', book.title)
         self.assertEqual(86, len(book.chapter_entries))
         book = novel.books[7]
-        self.assertEqual('Vol 8: The Prosperous Central Continent, The Journey Across It', book.title)
+        self.assertEqual('The Prosperous Central Continent, The Journey Across It', book.title)
         self.assertEqual(150, len(book.chapter_entries))
         book = novel.books[8]
-        self.assertEqual('Vol 9: Southern Viewing Continent, Hatred of the Previous Years', book.title)
+        self.assertEqual('Southern Viewing Continent, Hatred of the Previous Years', book.title)
         self.assertEqual(80, len(book.chapter_entries))
         book = novel.books[9]
-        self.assertEqual('Vol 10: Eastern Victory Divine Continent, Exquisite Bell Spirit', book.title)
+        self.assertEqual('Eastern Victory Divine Continent, Exquisite Bell Spirit', book.title)
         self.assertEqual(110, len(book.chapter_entries))
         book = novel.books[10]
-        self.assertEqual('Vol 11: Storm in the Fifth Continent, The Northern Sacred Lu Continent', book.title)
+        self.assertEqual('Storm in the Fifth Continent, The Northern Sacred Lu Continent', book.title)
         self.assertEqual(125, len(book.chapter_entries))
         book = novel.books[11]
         self.assertEqual(
-            'Vol 12: Stepping on Lion King Ridge, Trampling with such force until the mountains and rivers crumble',
+            'Stepping on Lion King Ridge, Trampling with such force until the mountains and rivers crumble',
             book.title)
         self.assertEqual(74, len(book.chapter_entries))
         book = novel.books[12]
         self.assertEqual(
-            'Vol 13: Arriving at the Four Continents, Hundred Dynasties, Hundred States. The path of a State Master',
+            'Arriving at the Four Continents, Hundred Dynasties, Hundred States. The path of a State Master',
             book.title)
         self.assertEqual(178, len(book.chapter_entries))
         book = novel.books[13]
-        self.assertEqual('Vol 14: Soaring Dragon, Dancing Phoenix, Haohan Continent', book.title)
+        self.assertEqual('Soaring Dragon, Dancing Phoenix, Haohan Continent', book.title)
         self.assertEqual(280, len(book.chapter_entries))
         book = novel.books[14]
-        self.assertEqual('Vol 15: Demons & Monsters Dancing In Riotous Reverly, Beautiful Women Are Like Poetry',
+        self.assertEqual('Demons & Monsters Dancing In Riotous Reverly, Beautiful Women Are Like Poetry',
                          book.title)
         self.assertEqual(200, len(book.chapter_entries))
         book = novel.books[15]
-        self.assertEqual('Vol 16 (Final): Oceanic Grand World, Legend of the Nine Continents!', book.title)
+        self.assertEqual('(Final): Oceanic Grand World, Legend of the Nine Continents!', book.title)
         self.assertEqual(700, len(book.chapter_entries))
 
     def test_parsing_chapter_1(self):
@@ -489,7 +489,7 @@ class WuxiaWorldComApiASTTest(unittest.TestCase):
         self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-1',
                          chapter.url.url)
         self.assertEqual('https://www.wuxiaworld.com', chapter.change_url(path=None).url)
-        self.assertEqual("Chapter 1 - Qing Clan, Qing Shui", chapter.title)
+        self.assertEqual("Qing Clan, Qing Shui", chapter.title)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-1', chapter.url.path)
         self.assertEqual(14875, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
@@ -497,6 +497,7 @@ class WuxiaWorldComApiASTTest(unittest.TestCase):
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-2', chapter.next_chapter.url.path)
         self.maxDiff = None
         chapter.clean_content()
+        print(chapter._title)
         self.assertEqual("""
 This is a small village surrounded by hills and mountains, the scenery is breathtaking. The village’s surroundings are filled with the abundance of flora and fauna. Even the quality of the air here is fragrant beyond comparison.
 
@@ -576,7 +577,7 @@ Editor: Ziltch
         self.assertEqual('https://www.wuxiaworld.com/novel/ancient-strengthening-technique/ast-chapter-101',
                          chapter.url.url)
         self.assertEqual('https://www.wuxiaworld.com', chapter.change_url(path=None).url)
-        self.assertEqual("Chapter 101 - A Quiet Beauty", chapter.title)
+        self.assertEqual("A Quiet Beauty", chapter.title)
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-101', chapter.url.path)
         self.assertEqual(14974, chapter.chapter_id)
         self.assertFalse(chapter.is_teaser)
@@ -584,7 +585,7 @@ Editor: Ziltch
         self.assertEqual('/novel/ancient-strengthening-technique/ast-chapter-102', chapter.next_chapter.url.path)
 
 
-# noinspection SpellCheckingInspection
+# noinspection SpellCheckingInspection,DuplicatedCode
 class WuxiaWorldComApiSearchTest(unittest.TestCase):
     def test_search_default(self):
         browser = prepare_browser(Har.WW_SEARCH_DEFAULT)

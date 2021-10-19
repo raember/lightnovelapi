@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 
 from spoofbot.adapter import FileCacheAdapter, HarAdapter
 
-from lightnovel.qidianunderground_org import QidianUndergroundOrgApi, QidianUndergroundOrgChapter, QidianUndergroundOrgNovel
+from lightnovel.qidianunderground_org import QidianUndergroundOrgApi, QidianUndergroundOrgChapter, \
+    QidianUndergroundOrgNovel
 from lightnovel.qidianunderground_org.api import QidianUndergroundOrgNovelEntry
 from tests.config import prepare_browser, Har, resolve_path
 
@@ -71,8 +72,8 @@ class QidianUndergroundOrgPoTTest(unittest.TestCase):
         self.assertEqual('https://vim.cx/?7254a27db5af3377#ARwznrey5WNPJc9gTYwRrXgnKqgQuUViauBCx43tN4kh',
                          chapter.url.url)
         self.assertEqual('https://vim.cx', chapter.change_url(path=None, query=None, fragment=None).url)
-        self.assertEqual('Chapter 94: The Fourth Arrow!', chapter.title)
-        self.assertEqual('The Fourth Arrow!', chapter.extract_clean_title())
+        self.assertEqual('The Fourth Arrow!', chapter.title)
+        self.assertEqual(94, chapter.index)
         self.assertTrue(chapter.is_complete())
         self.assertIsNone(chapter.previous_chapter)
         self.assertIsNone(chapter.next_chapter)
